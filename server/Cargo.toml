@@ -1,0 +1,9 @@
+[package]
+name = "server"
+version = "0.0.1"
+authors = ["dan sinclair <dj2@everburning.com>"]
+edition = "2018"
+description = "the archive server"
+license = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/dj2/Archive/server"
