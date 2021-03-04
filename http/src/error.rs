@@ -16,18 +16,7 @@ impl fmt::Display for Error {
         }
     }
 }
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Self::Parse(ref s) => s,
-            Self::PartialRequest => "",
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn error::Error> {
-        None
-    }
-}
+impl error::Error for Error {}
 impl From<ParseIntError> for Error {
     fn from(e: ParseIntError) -> Self {
         Self::Parse(e.to_string())

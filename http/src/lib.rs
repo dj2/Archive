@@ -16,5 +16,7 @@ pub mod version;
 pub use error::Error;
 pub use headers::Headers;
 pub use method::Method;
+pub use response::Response;
+pub use request::Request;
 pub use status::Status;
 pub use version::Version;
