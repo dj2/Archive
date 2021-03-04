@@ -1,5 +1,6 @@
-use crate::error::Error;
+use crate::Error;
 use std::convert::TryFrom;
+use std::fmt;
 
 /// A HTTP method.
 #[derive(Debug, PartialEq)]
@@ -56,6 +57,21 @@ impl TryFrom<&str> for Method {
             "TRACE" => Ok(Self::Trace),
             "PATCH" => Ok(Self::Patch),
             _ => Err(Error::Parse(format!("Unknown HTTP method: {}", s))),
+        }
+    }
+}
+impl fmt::Display for Method {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Self::Get => write!(f, "GET"),
+            Self::Head => write!(f, "HEAD"),
+            Self::Post => write!(f, "POST"),
+            Self::Put => write!(f, "PUT"),
+            Self::Delete => write!(f, "DELETE"),
+            Self::Connect => write!(f, "CONNECT"),
+            Self::Options => write!(f, "OPTIONS"),
+            Self::Trace => write!(f, "TRACE"),
+            Self::Patch => write!(f, "PATCH"),
         }
     }
 }
@@ -119,5 +135,10 @@ mod tests {
             m,
             Err(Error::Parse("Unknown HTTP method: INVALID".to_string()))
         )
+    }
+
+    #[test]
+    fn to_string() {
+        assert_eq!("GET", Method::Get.to_string());
     }
 }

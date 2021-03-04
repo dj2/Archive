@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::Error;
 
 const fn from_hex(c: u8) -> Option<u8> {
     match c {

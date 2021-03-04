@@ -1,8 +1,9 @@
-use crate::error::Error;
+use crate::Error;
 use std::convert::TryFrom;
+use std::fmt;
 
 /// The HTTP version.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Version {
     /// Version 1.0
     V1_0,
@@ -20,6 +21,15 @@ impl TryFrom<&str> for Version {
             "HTTP/1.1" => Ok(Self::V1_1),
             "HTTP/2.0" => Ok(Self::V2_0),
             _ => Err(Error::Parse(format!("Unknown HTTP version: {}", s))),
+        }
+    }
+}
+impl fmt::Display for Version {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Self::V1_0 => write!(f, "HTTP/1.0"),
+            Self::V1_1 => write!(f, "HTTP/1.1"),
+            Self::V2_0 => write!(f, "HTTP/2.0"),
         }
     }
 }
@@ -53,5 +63,10 @@ mod tests {
             v,
             Err(Error::Parse("Unknown HTTP version: HTTP/1.3".to_string()))
         )
+    }
+
+    #[test]
+    fn to_string() {
+        assert_eq!("HTTP/1.1", Version::V1_1.to_string());
     }
 }

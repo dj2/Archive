@@ -1,9 +1,9 @@
-use crate::error::Error;
-use crate::method::Method;
+use crate::Error;
+use crate::Headers;
+use crate::Method;
 use crate::uri;
-use crate::version::Version;
+use crate::Version;
 
-use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
 
@@ -18,7 +18,7 @@ pub struct Request {
     /// component. The query params are split into params.
     pub uri: String,
     /// The HTTP headers
-    pub headers: HashMap<String, String>,
+    pub headers: Headers,
     /// Any body data attached to the request.
     pub body: String,
 }
@@ -26,7 +26,7 @@ impl TryFrom<String> for Request {
     type Error = Error;
 
     fn try_from(req: String) -> Result<Self, Error> {
-        let mut headers: HashMap<String, String> = HashMap::new();
+        let mut headers = Headers::new();
         let mut body = String::from("");
 
         let mut lines = req.lines();
@@ -41,7 +41,7 @@ impl TryFrom<String> for Request {
             }
 
             let (k, v) = parse_header_line(l)?;
-            headers.insert(k.to_lowercase(), v);
+            headers.insert(&k, &v);
         }
         // Don't appear to have found the end of the headers.
         if !found_break {
@@ -57,7 +57,7 @@ impl TryFrom<String> for Request {
 
         // If a content-length header was provided make sure we
         // have that much data.
-        if let Some(v) = headers.get("content-length") {
+        if let Some(v) = headers.get(Headers::CONTENT_LENGTH) {
             let len = v.parse::<usize>()?;
             if len > body.len() {
                 return Err(Error::PartialRequest);
@@ -131,10 +131,10 @@ Accept: */*
 ",
         );
 
-        let mut headers = HashMap::new();
-        headers.insert("host".into(), "localhost".into());
-        headers.insert("user-agent".into(), "Archive".into());
-        headers.insert("accept".into(), "*/*".into());
+        let mut headers = Headers::new();
+        headers.insert(Headers::HOST, "localhost");
+        headers.insert(Headers::USER_AGENT, "Archive");
+        headers.insert(Headers::ACCEPT, "*/*");
 
         let req: Result<Request, Error> = s.try_into();
         assert!(req.is_ok(), "{:?}", req);
@@ -158,11 +158,11 @@ Accept: */*
 This is the body 123",
         );
 
-        let mut headers = HashMap::new();
-        headers.insert("host".into(), "localhost".into());
-        headers.insert("user-agent".into(), "Archive".into());
-        headers.insert("content-length".into(), "20".into());
-        headers.insert("accept".into(), "*/*".into());
+        let mut headers = Headers::new();
+        headers.insert(Headers::HOST, "localhost");
+        headers.insert(Headers::USER_AGENT, "Archive");
+        headers.insert(Headers::CONTENT_LENGTH, "20");
+        headers.insert(Headers::ACCEPT, "*/*");
 
         let req: Result<Request, Error> = s.try_into();
         assert!(req.is_ok(), "{:?}", req);
@@ -234,10 +234,10 @@ Accept: */*
 ",
         );
 
-        let mut headers = HashMap::new();
-        headers.insert("host".into(), "".into());
-        headers.insert("user-agent".into(), "Archive".into());
-        headers.insert("accept".into(), "*/*".into());
+        let mut headers = Headers::new();
+        headers.insert(Headers::HOST, "");
+        headers.insert(Headers::USER_AGENT, "Archive");
+        headers.insert(Headers::ACCEPT, "*/*");
 
         let req: Result<Request, Error> = s.try_into();
         assert!(req.is_ok(), "{:?}", req);
