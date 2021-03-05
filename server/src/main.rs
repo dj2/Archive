@@ -1,16 +1,17 @@
 mod archive;
 
-use rocket_contrib::templates::Template;
-use rocket::{Request, State};
-use rocket::http::ContentType;
-use rocket::response::{content, NamedFile};
-use std::path::PathBuf;
-use std::collections::HashMap;
-use rocket_contrib::serve::{crate_relative, StaticFiles};
 use archive::Archive;
-use tokio::sync::RwLock;
-use tokio::io::AsyncReadExt;
+use rocket::http::ContentType;
+use rocket::response::status::NotFound;
+use rocket::response::{content, NamedFile};
+use rocket::{Request, State};
+use rocket_contrib::serve::{crate_relative, StaticFiles};
+use rocket_contrib::templates::Template;
+use std::collections::HashMap;
 use std::env;
+use std::path::PathBuf;
+use tokio::io::AsyncReadExt;
+use tokio::sync::RwLock;
 
 #[macro_use]
 extern crate rocket;
@@ -18,7 +19,7 @@ extern crate rocket;
 #[get("/asset/<file..>")]
 async fn assets(file: PathBuf, state: State<'_, ArchiveState>) -> Option<NamedFile> {
     let archive = state.archive.read().await;
-    archive.retrieve_asset(file).await
+    archive.retrieve_asset(&file).await
 }
 
 #[derive(serde::Serialize)]
@@ -28,27 +29,35 @@ struct NoteContext<'a> {
     parent: &'static str,
 }
 #[get("/note/<name..>", rank = 2, format = "text/html")]
-async fn note_html(name: PathBuf, state: State<'_, ArchiveState>) -> Template {
+async fn note_html(
+    name: PathBuf,
+    state: State<'_, ArchiveState>,
+) -> Result<Template, NotFound<String>> {
     let archive = state.archive.read().await;
     let id = name.to_str().unwrap().to_string();
 
-    let mut file = archive.retrieve_note(name).await.unwrap();
+    let mut file = archive.retrieve_note(&name).await.unwrap();
     let mut buf = String::new();
-    file.read_to_string(&mut buf).await;
+
+    if file.read_to_string(&mut buf).await.is_err() {
+        return Err(NotFound(name.to_str().unwrap().to_string()));
+    }
 
     let ctx = NoteContext {
         id: &id,
         content: &buf,
         parent: "layout",
     };
-    Template::render("show", &ctx)
+    Ok(Template::render("show", &ctx))
 }
 
 #[get("/note/<name..>", rank = 1, format = "text/plain")]
 async fn note_plain(name: PathBuf, state: State<'_, ArchiveState>) -> content::Content<NamedFile> {
     let archive = state.archive.read().await;
-    content::Content(ContentType::Plain,
-                    archive.retrieve_note(name).await.unwrap())
+    content::Content(
+        ContentType::Plain,
+        archive.retrieve_note(&name).await.unwrap(),
+    )
 }
 
 #[derive(serde::Serialize)]
@@ -57,9 +66,7 @@ struct IndexContext {
 }
 #[get("/")]
 async fn index<'a>() -> Template {
-    let ctx = IndexContext {
-        parent: "layout",
-    };
+    let ctx = IndexContext { parent: "layout" };
     Template::render("index", &ctx)
 }
 
@@ -94,5 +101,7 @@ fn rocket() -> rocket::Rocket {
 
     let archive = Archive::new(&data_path, &asset_path);
 
-    rocket.manage(ArchiveState { archive: RwLock::new(archive) })
+    rocket.manage(ArchiveState {
+        archive: RwLock::new(archive),
+    })
 }
