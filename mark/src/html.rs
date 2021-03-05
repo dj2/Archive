@@ -1,14 +1,19 @@
 use std::fmt;
+use crate::tree::Doc;
 
-pub struct Html {}
+pub struct Html<'a> {
+  doc: &'a Doc<'a>,
+}
 
-impl Html {
-    pub fn new() -> Self {
-        Html {}
+impl<'a> Html<'a> {
+    pub fn new(doc: &'a Doc) -> Self {
+        Html {
+          doc
+        }
     }
 }
-impl fmt::Display for Html {
+impl<'a> fmt::Display for Html<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "HTML")
+      write!(f, "{}", self.doc.to_string())
     }
 }
