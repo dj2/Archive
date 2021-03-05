@@ -8,6 +8,11 @@ use std::path::{Path, PathBuf};
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio_util::codec::{BytesCodec, FramedRead};
+use handlebars::Handlebars;
+use std::collections::HashMap;
+
+#[macro_use]
+extern crate lazy_static;
 
 static SERVER_DEFAULT_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 static SERVER_DEFAULT_PORT: u16 = 3000;
@@ -16,9 +21,23 @@ static SERVER_DEFAULT_DATA_PATH: &str = "./data/data";
 
 static NOTFOUND: &str = "Not Found";
 
-struct State {
+lazy_static! {
+  static ref HB: Handlebars<'static> = {
+    let mut hb = Handlebars::new();
+    if let Err(e) = hb.register_template_file("index", "./server/views/index.hbs") {
+      panic!("Failed to load template: index\n{}", e);
+    }
+    if let Err(e) = hb.register_template_file("layout", "./server/views/layout.hbs") {
+      panic!("Failed to load template: layout\n{}", e);
+    }
+    hb
+  };
+}
+
+struct State<'a> {
     asset_path: String,
     data_path: String,
+    hb: &'a Handlebars<'a>,
 }
 
 #[tokio::main]
@@ -58,25 +77,6 @@ async fn shutdown() {
         .expect("failed to install ctrl-c signal handler");
 }
 
-fn router(asset_path: String, data_path: String) -> Router<Body, hyper::Error> {
-    let state = State {
-        asset_path,
-        data_path,
-    };
-
-    Router::builder()
-        .data(state)
-        .middleware(Middleware::pre(logger_middleware))
-        .middleware(Middleware::post(server_middleware))
-        .get("/", index_handler)
-        .get("/index.html", index_handler)
-        .get("/notes/:name", note_handler)
-        .get("/assets/*", asset_handler)
-        .err_handler_with_info(error_handler)
-        .build()
-        .unwrap()
-}
-
 async fn server_middleware(mut res: Response<Body>) -> Result<Response<Body>> {
     res.headers_mut()
         .insert(header::SERVER, HeaderValue::from_str("Archive").unwrap());
@@ -110,24 +110,26 @@ async fn error_handler(err: routerify::Error, _: RequestInfo) -> Response<Body> 
         .unwrap()
 }
 
-async fn index_handler(_req: Request<Body>) -> Result<Response<Body>> {
-    Ok(Response::new(Body::from("Index")))
+async fn index_handler(req: Request<Body>) -> Result<Response<Body>> {
+    let state = req.data::<State>().unwrap();
+
+    let mut d = HashMap::new();
+    d.insert("parent", "layout");
+
+    let body = state.hb.render("index", &d).ok();
+    if let Some(body) = body {
+      Ok(Response::new(Body::from(body)))
+    } else {
+      Ok(not_found())
+    }
 }
 
-fn clean_path(prefix: &str, path: &str) -> Option<PathBuf> {
-    let mut s = path.to_string();
-    if !s.starts_with('/') {
-        s = format!("/{}", s);
+async fn static_handler(req: Request<Body>) -> Result<Response<Body>> {
+    let path = clean_path("server/public", &req.uri().path());
+    if let Some(path) = path {
+        return send_file(&path).await;
     }
-
-    let mut path = PathBuf::from(prefix);
-    for p in s.split('/') {
-        if p == ".." || p == "." {
-            continue;
-        }
-        path.push(p);
-    }
-    path.canonicalize().ok()
+    Ok(not_found())
 }
 
 async fn asset_handler(req: Request<Body>) -> Result<Response<Body>> {
@@ -172,6 +174,44 @@ async fn send_file(path: &Path) -> Result<Response<Body>> {
     }
 
     Ok(not_found())
+}
+
+fn router(asset_path: String, data_path: String) -> Router<Body, hyper::Error> {
+  let state = State {
+        asset_path,
+        data_path,
+        hb: &HB,
+    };
+
+    Router::builder()
+        .data(state)
+        .middleware(Middleware::pre(logger_middleware))
+        .middleware(Middleware::post(server_middleware))
+        .get("/css/*", static_handler)
+        .get("/js/*", static_handler)
+        .get("/notes/:name", note_handler)
+        .get("/assets/*", asset_handler)
+        .get("/index.html", index_handler)
+        .get("/", index_handler)
+        .err_handler_with_info(error_handler)
+        .build()
+        .unwrap()
+}
+
+fn clean_path(prefix: &str, path: &str) -> Option<PathBuf> {
+    let mut s = path.to_string();
+    if !s.starts_with('/') {
+        s = format!("/{}", s);
+    }
+
+    let mut path = PathBuf::from(prefix);
+    for p in s.split('/') {
+        if p == ".." || p == "." {
+            continue;
+        }
+        path.push(p);
+    }
+    path.canonicalize().ok()
 }
 
 fn not_found() -> Response<Body> {

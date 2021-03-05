@@ -14,3 +14,5 @@ tokio = { version = "1", features = [ "full" ] }
 tokio-util = { version = "0.6", features = [ "codec" ] }
 routerify = "2.0.0-beta-4"
 tree_magic = { version = "0.2" }
+handlebars = { version = "3.5" }
+lazy_static = { version = "1.4" }
