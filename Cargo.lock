@@ -634,6 +634,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
+name = "mark"
+version = "0.1.0"
+
+[[package]]
 name = "memchr"
 version = "2.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1275,6 +1279,7 @@ name = "server"
 version = "0.0.1"
 dependencies = [
  "chrono",
+ "mark",
  "rocket",
  "rocket_contrib",
  "serde",

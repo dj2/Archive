@@ -12,6 +12,7 @@ repository = "https://github.com/dj2/Archive/server"
 tokio = { version = "1.2", features = [ "sync" ] }
 serde = { version = "1.0", features = [ "derive" ] }
 chrono = { version = "0.4" }
+mark = { path = "../mark" }
 
 [dependencies.rocket]
 version = "0.5.0-dev"

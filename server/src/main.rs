@@ -43,6 +43,7 @@ async fn note_html(
         return Err(NotFound(name.to_str().unwrap().to_string()));
     }
 
+    let buf = mark::to_html(&buf);
     let ctx = NoteContext {
         id: &id,
         content: &buf,
