@@ -1,2 +1,16 @@
-* { box-sizing: border-box; }
+@import '/css/normalize.css';
 
+*,
+*:after,
+*:before {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  line-height: 18px;
+  font-size: 17px;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}

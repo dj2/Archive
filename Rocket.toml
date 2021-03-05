@@ -1,0 +1,5 @@
+[global]
+template_dir = "server/templates/"
+
+[debug]
+keep_alive = 0
