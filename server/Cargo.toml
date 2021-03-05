@@ -9,4 +9,8 @@ readme = "README.md"
 repository = "https://github.com/dj2/Archive/server"
 
 [dependencies]
-http = {path = "../http"}
+hyper = { version = "0.14", features = [ "full" ] }
+tokio = { version = "1", features = [ "full" ] }
+tokio-util = { version = "0.6", features = [ "codec" ] }
+routerify = "2.0.0-beta-4"
+tree_magic = { version = "0.2" }
