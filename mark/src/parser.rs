@@ -21,6 +21,7 @@ enum Kind {
     Blockquote,
     Header(usize),
     Paragraph,
+    ThematicBreak,
 }
 
 /// A node holds information about a given block in the document. The node
@@ -48,7 +49,7 @@ impl<'a> Node<'a> {
         match self.kind {
             Kind::Doc => false,
             Kind::Blockquote | Kind::Paragraph => !(kind == Kind::Paragraph),
-            Kind::Header(_) => true,
+            Kind::Header(_) | Kind::ThematicBreak => true,
         }
     }
 
@@ -125,6 +126,7 @@ impl<'a, 'b> Parser<'a> {
                 }
                 Block::Paragraph(inlines)
             }
+            Kind::ThematicBreak => Block::ThematicBreak,
         }
     }
 
@@ -151,7 +153,7 @@ impl<'a, 'b> Parser<'a> {
         loop {
             let i = self.find_open_node(self.root);
             if self.nodes[i].is_closed_by(kind) {
-                self.nodes[i].open = false;
+                self.close_node(i);
                 continue;
             }
             return i;
@@ -169,15 +171,37 @@ impl<'a, 'b> Parser<'a> {
         val
     }
 
+    /// Marks node at `idx` as closed.
+    fn close_node(&mut self, idx: usize) {
+        self.nodes[idx].open = false;
+    }
+
+    /// Adds the given `txt` to the node at `idx`.
+    fn add_node_text(&mut self, idx: usize, txt: &'a str) {
+        self.nodes[idx].text.push(txt);
+    }
+
+    /// Returns true if the node `idx` contains text.
+    fn node_has_text(&self, idx: usize) -> bool {
+        !self.nodes[idx].text.is_empty()
+    }
+
+    /// Returns true if the node at `idx` is closed by a hardbreak
+    fn node_is_closed_by_hardbreak(&self, idx: usize) -> bool {
+        self.nodes[idx].is_closed_by_hardbreak()
+    }
+
     /// Parse the set of `lines` and add to the node tree.
     fn parse_lines(&mut self, lines: &[&'a str]) {
         let mut idx = 0;
         while idx < lines.len() {
             if lines[idx].trim().is_empty() {
                 let node_idx = self.find_open_node(self.root);
-                if self.nodes[node_idx].is_closed_by_hardbreak() {
-                    self.nodes[node_idx].open = false
+                if self.node_is_closed_by_hardbreak(node_idx) {
+                    self.close_node(node_idx);
                 }
+                idx += 1;
+            } else if self.try_thematic_break(&lines, idx).is_some() {
                 idx += 1;
             } else if let Some(consumed) = self.try_blockquote(&lines, idx) {
                 idx += consumed;
@@ -185,10 +209,10 @@ impl<'a, 'b> Parser<'a> {
                 idx += 1;
             } else {
                 let mut node_idx = self.find_open_node(self.root);
-                if self.nodes[node_idx].text.is_empty() {
+                if !self.node_has_text(node_idx) {
                     node_idx = self.add_node(Kind::Paragraph);
                 }
-                self.nodes[node_idx].text.push(&lines[idx]);
+                self.add_node_text(node_idx, &lines[idx]);
                 idx += 1;
             }
         }
@@ -234,8 +258,21 @@ impl<'a, 'b> Parser<'a> {
             }
 
             let node_idx = self.add_node(Kind::Header(lvl));
-            self.nodes[node_idx].text.push(txt);
-            self.nodes[node_idx].open = false;
+            self.add_node_text(node_idx, txt);
+            self.close_node(node_idx);
+            return Some(());
+        }
+        None
+    }
+
+    /// Attempts to parse the thematic break of `***`, `---`, and `___`.
+    fn try_thematic_break(&mut self, lines: &[&'a str], idx: usize) -> Option<()> {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"^(\s*(\*|-|_)){3,}\s*$").unwrap();
+        }
+        if RE.is_match(lines[idx]) {
+            let node_idx = self.add_node(Kind::ThematicBreak);
+            self.close_node(node_idx);
             return Some(());
         }
         None
