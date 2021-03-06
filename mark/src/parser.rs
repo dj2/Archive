@@ -1,5 +1,17 @@
 //! Parser to convert from a string into the tree AST.
-
+//!
+//! The parser works in two passes. The first pass builds up an internal
+//! representation of `Node` objects for each block in the document. Each node
+//! is added to a list of nodes and any sub-nodes are then tracked as indices
+//! into the main list. This makes it easy to find things like the current open
+//! node without having to pass around mutable references. The first pass leaves
+//! any text as text fragments to be processed in the second pass. Any link
+//! references found during this pass are recorded to be used in link resolving
+//! in the second pass.
+//!
+//! The second pass passes any inlines like emphasis as well as resolving link
+//! targets. The output of the second pass a tree of `Block`s which are the
+//! the final representation of the document.
 use crate::tree::{Block, Doc, Inline};
 use regex::Regex;
 
@@ -10,6 +22,10 @@ enum Kind {
     Header(usize),
     Paragraph,
 }
+
+/// A node holds information about a given block in the document. The node
+/// will hold _either_ `blocks` or `text` but not both. These aren't stored as
+/// optional as we want to be able to push new entries into the lists.
 #[derive(Clone, Debug)]
 struct Node<'a> {
     kind: Kind,
@@ -27,6 +43,7 @@ impl<'a> Node<'a> {
         }
     }
 
+    /// Determines if the current node is closed by a node of `kind`.
     fn is_closed_by(&self, kind: Kind) -> bool {
         match self.kind {
             Kind::Doc => false,
@@ -35,17 +52,20 @@ impl<'a> Node<'a> {
         }
     }
 
+    /// Determines if a blank line in the document will close the current node.
     fn is_closed_by_hardbreak(&self) -> bool {
         self.kind == Kind::Paragraph
     }
 }
 
+/// The parser object. Given a string will turn it into a document AST.
 pub struct Parser<'a> {
     root: usize,
     nodes: Vec<Node<'a>>,
     buf: &'a str,
 }
 impl<'a, 'b> Parser<'a> {
+    /// Create a new parser for the markdown document `str`.
     pub fn new(buf: &'a str) -> Self {
         Self {
             root: 0,
@@ -54,21 +74,23 @@ impl<'a, 'b> Parser<'a> {
         }
     }
 
+    /// Parse the document and generate an AST.
     pub fn parse(&mut self) -> Doc<'a> {
         let lines: Vec<&'a str> = self.buf.lines().collect();
         self.parse_lines(&lines);
         self.build_doc()
     }
 
+    /// Takes the internal node tree and converts to the final AST.
     fn build_doc(&mut self) -> Doc<'a> {
         let mut blocks = vec![];
         for idx in &self.nodes[self.root].blocks {
             blocks.push(self.to_block(*idx));
         }
-
-        Doc { blocks }
+        Doc::new(blocks)
     }
 
+    /// Converts the node at `idx` into a corresponding block.
     fn to_block(&self, idx: usize) -> Block<'a> {
         match self.nodes[idx].kind {
             Kind::Doc => {
@@ -106,6 +128,12 @@ impl<'a, 'b> Parser<'a> {
         }
     }
 
+    /// Finds the deepest open node in the tree. Open nodes are always the
+    /// last node in a blocks child list, so we just have to check the last entry
+    /// to determine if there is a deeper open node.
+    ///
+    /// The `root` node should never be closed, so this will always return a
+    /// valid index.
     fn find_open_node(&self, idx: usize) -> usize {
         let node = self.nodes[idx].blocks.last();
         if let Some(i) = node {
@@ -116,6 +144,9 @@ impl<'a, 'b> Parser<'a> {
         idx
     }
 
+    /// Given a node of `kind` find the first open node in which we can append
+    /// `kind`. Any open nodes which are closed by `kind` will be marked as
+    /// closed.
     fn get_open_parent_for(&mut self, kind: Kind) -> usize {
         loop {
             let i = self.find_open_node(self.root);
@@ -127,6 +158,8 @@ impl<'a, 'b> Parser<'a> {
         }
     }
 
+    /// Creates a new node of `kind` and adds to the current open node. The
+    /// id of the new node is returned.
     fn add_node(&mut self, kind: Kind) -> usize {
         let parent = self.get_open_parent_for(kind);
         self.nodes.push(Node::new(kind));
@@ -136,6 +169,7 @@ impl<'a, 'b> Parser<'a> {
         val
     }
 
+    /// Parse the set of `lines` and add to the node tree.
     fn parse_lines(&mut self, lines: &[&'a str]) {
         let mut idx = 0;
         while idx < lines.len() {
@@ -160,6 +194,12 @@ impl<'a, 'b> Parser<'a> {
         }
     }
 
+    /// Attempt to parse a blockquote in `lines`. If a blockquote is found, then
+    /// consume the lines until the end of the blockquote and return the number
+    /// of lines consumed.
+    ///
+    /// Note, unlike markdown, we require each line of the blockquote to start
+    /// with a '>'.
     fn try_blockquote(&mut self, lines: &[&'a str], idx: usize) -> Option<usize> {
         let mut consumed = 0;
         let mut sub_lines: Vec<&'a str> = vec![];
@@ -180,6 +220,7 @@ impl<'a, 'b> Parser<'a> {
         None
     }
 
+    /// Attempt to parse a header of up to 6 #'s.
     fn try_header(&mut self, lines: &[&'a str], idx: usize) -> Option<()> {
         lazy_static! {
             static ref RE: Regex = Regex::new(r"^\s*(\#{1,6})(\s+(.*?))?(\s+\#*)?\s*$").unwrap();

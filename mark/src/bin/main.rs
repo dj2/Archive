@@ -1,3 +1,7 @@
+//! Simple program to run the marked library. By default the original text,
+//! AST and HTML will all be written to the console. Various flags allow
+//! turning bits off if desired.
+
 #![deny(clippy::all, clippy::pedantic)]
 
 use clap::{App, Arg};

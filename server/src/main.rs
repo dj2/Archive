@@ -1,3 +1,5 @@
+//! Server for the Archive.
+
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(clippy::let_underscore_drop)]
 
