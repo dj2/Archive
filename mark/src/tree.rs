@@ -31,12 +31,26 @@ impl<'a> fmt::Display for Doc<'a> {
 pub enum Block<'a> {
     /// A blockquote containing a set of blocks.
     Blockquote(Vec<Block<'a>>),
+    /// A code block. Provides an optional language and the text lines.
+    Code(Option<&'a str>, Vec<Inline<'a>>),
     /// A header with a given level and set of inline text.
     Header(usize, Vec<Inline<'a>>),
     /// A paragraph with a given set of inline text.
     Paragraph(Vec<Inline<'a>>),
     /// A thematic break.
     ThematicBreak,
+}
+
+impl<'a> Block<'a> {
+    fn write_inlines(&self, f: &mut fmt::Formatter, inlines: &[Inline<'a>]) -> fmt::Result {
+        for (i, inline) in inlines.iter().enumerate() {
+            if i != 0 {
+                writeln!(f,)?;
+            }
+            write!(f, "{}", inline.to_string())?;
+        }
+        Ok(())
+    }
 }
 
 impl<'a> fmt::Display for Block<'a> {
@@ -52,24 +66,23 @@ impl<'a> fmt::Display for Block<'a> {
                 }
                 write!(f, "</blockquote>")?;
             }
+            Block::Code(lang, inlines) => {
+                write!(f, "<pre><code")?;
+                if let Some(lang) = lang {
+                    write!(f, " class='language-{}'", lang)?;
+                }
+                write!(f, ">")?;
+                self.write_inlines(f, inlines)?;
+                write!(f, "</code></pre>")?;
+            }
             Block::Header(lvl, inlines) => {
                 write!(f, "<h{}>", lvl)?;
-                for (i, inline) in inlines.iter().enumerate() {
-                    if i != 0 {
-                        writeln!(f,)?;
-                    }
-                    write!(f, "{}", inline.to_string())?;
-                }
+                self.write_inlines(f, inlines)?;
                 write!(f, "</h{}>", lvl)?;
             }
             Block::Paragraph(inlines) => {
                 write!(f, "<p>")?;
-                for (i, inline) in inlines.iter().enumerate() {
-                    if i != 0 {
-                        writeln!(f,)?;
-                    }
-                    write!(f, "{}", inline.to_string())?;
-                }
+                self.write_inlines(f, inlines)?;
                 write!(f, "</p>")?;
             }
             Block::ThematicBreak => {

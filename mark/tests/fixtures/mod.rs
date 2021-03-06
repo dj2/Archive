@@ -21,7 +21,7 @@ fn compare(name: &str) {
         .unwrap();
 
     println!("{}", src);
-    assert_diff!(&mark::to_html(&src), &result, " ", 0);
+    assert_diff!(&result, &mark::to_html(&src), "\n", 0);
 }
 
 #[test]
@@ -42,4 +42,9 @@ pub fn headers() {
 #[test]
 pub fn thematic_breaks() {
     compare("thematic_breaks")
+}
+
+#[test]
+pub fn fenced_code() {
+    compare("fenced_code")
 }

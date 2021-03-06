@@ -28,7 +28,7 @@
    * [ ] Ordered (lower alpha, upper alpha, lower roman, upper roman, number)
    * [ ] Unordered
  * [x] Thematic breaks (---, ***, ___)
- * [ ] Code blocks (fenced only, no indented code blocks)
+ * [x] Code blocks (fenced only, no indented code blocks)
  * [ ] Inline code blocks
  * [ ] Math blocks
  * [ ] Inline math blocks
