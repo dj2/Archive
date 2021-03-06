@@ -28,7 +28,7 @@ impl<'a> Node<'a> {
     fn is_closed_by(&self, kind: Kind) -> bool {
         match self.kind {
             Kind::Doc => false,
-            Kind::Blockquote => true,
+            Kind::Blockquote => !(kind == Kind::Paragraph),
             Kind::Header(_) => true,
             Kind::Paragraph => !(kind == Kind::Paragraph),
         }
@@ -126,6 +126,15 @@ impl<'a, 'b> Parser<'a> {
         }
     }
 
+    fn add_node(&mut self, kind: Kind) -> usize {
+        let parent = self.get_open_parent_for(kind);
+        self.nodes.push(Node::new(kind));
+
+        let val = self.nodes.len() - 1;
+        self.nodes[parent].blocks.push(val);
+        val
+    }
+
     fn parse_lines(&mut self, lines: &[&'a str]) {
         let mut idx = 0;
         while idx < lines.len() {
@@ -138,21 +147,14 @@ impl<'a, 'b> Parser<'a> {
             } else if let Some(consumed) = self.try_blockquote(&lines, idx) {
                 idx += consumed;
             } else if let Some((lvl, text)) = self.try_header(&lines, idx) {
-                let parent = self.get_open_parent_for(Kind::Header(0));
-                self.nodes.push(Node::new(Kind::Header(lvl)));
-                let val = self.nodes.len() - 1;
-                self.nodes[parent].blocks.push(val);
-                self.nodes[val].text.push(text);
-                self.nodes[val].open = false;
+                let node_idx = self.add_node(Kind::Header(lvl));
+                self.nodes[node_idx].text.push(text);
+                self.nodes[node_idx].open = false;
                 idx += 1;
             } else {
                 let mut node_idx = self.find_open_node(self.root);
                 if self.nodes[node_idx].text.is_empty() {
-                    self.nodes.push(Node::new(Kind::Paragraph));
-                    let val = self.nodes.len() - 1;
-
-                    self.nodes[node_idx].blocks.push(val);
-                    node_idx = val;
+                    node_idx = self.add_node(Kind::Paragraph);
                 }
                 self.nodes[node_idx].text.push(&lines[idx]);
                 idx += 1;
@@ -173,15 +175,7 @@ impl<'a, 'b> Parser<'a> {
             consumed += 1;
         }
         if consumed > 0 {
-            let node_idx = self.get_open_parent_for(Kind::Blockquote);
-            self.nodes.push(Node::new(Kind::Blockquote));
-            let val = self.nodes.len() - 1;
-            self.nodes[node_idx].blocks.push(val);
-
-            // Now that the blockquote is inserted, it will be the open node.
-            let node_idx = self.find_open_node(self.root);
-            assert!(self.nodes[node_idx].kind == Kind::Blockquote);
-
+            let _ = self.add_node(Kind::Blockquote);
             self.parse_lines(&sub_lines);
             return Some(consumed);
         }
