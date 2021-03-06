@@ -27,13 +27,7 @@ impl<'a> Node<'a> {
         match self.kind {
             Kind::Doc => false,
             Kind::Blockquote => true,
-            Kind::Paragraph => {
-                if kind == Kind::Paragraph {
-                    false
-                } else {
-                    true
-                }
-            }
+            Kind::Paragraph => !(kind == Kind::Paragraph),
         }
     }
 
@@ -120,7 +114,7 @@ impl<'a, 'b> Parser<'a> {
         }
     }
 
-    fn parse_lines(&mut self, lines: &Vec<&'a str>) {
+    fn parse_lines(&mut self, lines: &[&'a str]) {
         let mut idx = 0;
         while idx < lines.len() {
             if lines[idx].trim().is_empty() {
@@ -146,7 +140,7 @@ impl<'a, 'b> Parser<'a> {
         }
     }
 
-    fn parse_blockquote(&mut self, lines: &Vec<&'a str>, idx: usize) -> Option<usize> {
+    fn parse_blockquote(&mut self, lines: &[&'a str], idx: usize) -> Option<usize> {
         let mut consumed = 0;
         let mut sub_lines: Vec<&'a str> = vec![];
 

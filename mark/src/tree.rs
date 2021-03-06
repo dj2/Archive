@@ -8,7 +8,7 @@ impl<'a> fmt::Display for Doc<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for idx in 0..self.blocks.len() {
             if idx > 0 {
-                write!(f, "\n")?;
+                writeln!(f,)?;
             }
             write!(f, "{}", self.blocks[idx].to_string())?;
         }
@@ -27,21 +27,21 @@ impl<'a> fmt::Display for Block<'a> {
         match self {
             Block::Blockquote(blocks) => {
                 write!(f, "<blockquote>")?;
-                for i in 0..blocks.len() {
+                for (i, block) in blocks.iter().enumerate() {
                     if i != 0 {
-                        write!(f, "\n")?;
+                        writeln!(f,)?;
                     }
-                    write!(f, "{}", blocks[i].to_string())?;
+                    write!(f, "{}", block.to_string())?;
                 }
                 write!(f, "</blockquote>")?;
             }
             Block::Paragraph(inlines) => {
                 write!(f, "<p>")?;
-                for i in 0..inlines.len() {
+                for (i, inline) in inlines.iter().enumerate() {
                     if i != 0 {
-                        write!(f, "\n")?;
+                        writeln!(f,)?;
                     }
-                    write!(f, "{}", inlines[i].to_string())?;
+                    write!(f, "{}", inline.to_string())?;
                 }
                 write!(f, "</p>")?;
             }
