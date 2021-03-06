@@ -1,3 +1,5 @@
+#![deny(clippy::all, clippy::pedantic)]
+
 use clap::{App, Arg};
 use std::fs;
 

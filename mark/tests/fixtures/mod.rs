@@ -1,7 +1,7 @@
+use difference::assert_diff;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-use difference::assert_diff;
 
 fn compare(name: &str) {
     let html = format!("tests/fixtures/data/{}.html", name);

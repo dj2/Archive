@@ -1,3 +1,6 @@
+#![deny(clippy::all, clippy::pedantic)]
+#![allow(clippy::let_underscore_drop)]
+
 mod archive;
 
 use archive::Archive;
@@ -88,21 +91,19 @@ static SERVER_DEFAULT_DATA_PATH: &str = "./data/data";
 
 #[launch]
 fn rocket() -> rocket::Rocket {
-    let rocket = rocket::ignite()
-        .attach(Template::fairing())
-        .register(catchers![not_found])
-        .mount("/", StaticFiles::from(crate_relative!("public")))
-        .mount("/", routes![assets, index])
-        .mount("/", routes![note_plain, note_html]);
-
     let asset_path =
         env::var("ARCHIVE_ASSET_PATH").unwrap_or_else(|_| SERVER_DEFAULT_ASSET_PATH.to_string());
     let data_path =
         env::var("ARCHIVE_DATA_PATH").unwrap_or_else(|_| SERVER_DEFAULT_DATA_PATH.to_string());
-
     let archive = Archive::new(&data_path, &asset_path);
 
-    rocket.manage(ArchiveState {
-        archive: RwLock::new(archive),
-    })
+    rocket::ignite()
+        .attach(Template::fairing())
+        .register(catchers![not_found])
+        .mount("/", StaticFiles::from(crate_relative!("public")))
+        .mount("/", routes![assets, index])
+        .mount("/", routes![note_plain, note_html])
+        .manage(ArchiveState {
+            archive: RwLock::new(archive),
+        })
 }
