@@ -12,7 +12,7 @@ impl<'a> Doc<'a> {
     /// Create a new document with `blocks`
     pub fn new(blocks: Vec<Block<'a>>) -> Self {
         Self {
-            blocks: blocks
+            blocks
         }
     }
 }
