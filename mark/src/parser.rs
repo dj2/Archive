@@ -1,3 +1,5 @@
+//! Parser to convert from a string into the tree AST.
+
 use crate::tree::{Block, Doc, Inline};
 use regex::Regex;
 
@@ -28,9 +30,8 @@ impl<'a> Node<'a> {
     fn is_closed_by(&self, kind: Kind) -> bool {
         match self.kind {
             Kind::Doc => false,
-            Kind::Blockquote => !(kind == Kind::Paragraph),
+            Kind::Blockquote | Kind::Paragraph => !(kind == Kind::Paragraph),
             Kind::Header(_) => true,
-            Kind::Paragraph => !(kind == Kind::Paragraph),
         }
     }
 
@@ -83,14 +84,14 @@ impl<'a, 'b> Parser<'a> {
                 Block::Blockquote(blocks)
             }
             Kind::Header(lvl) => {
-              assert!(self.nodes[idx].blocks.is_empty());
+                assert!(self.nodes[idx].blocks.is_empty());
 
-              // TODO(dj2): Parse inlines
-              let mut inlines = vec![];
-              for text in &self.nodes[idx].text {
-                inlines.push(Inline::Text(text));
-              }
-              Block::Header(lvl, inlines)
+                // TODO(dj2): Parse inlines
+                let mut inlines = vec![];
+                for text in &self.nodes[idx].text {
+                    inlines.push(Inline::Text(text));
+                }
+                Block::Header(lvl, inlines)
             }
             Kind::Paragraph => {
                 assert!(self.nodes[idx].blocks.is_empty());
@@ -146,10 +147,7 @@ impl<'a, 'b> Parser<'a> {
                 idx += 1;
             } else if let Some(consumed) = self.try_blockquote(&lines, idx) {
                 idx += consumed;
-            } else if let Some((lvl, text)) = self.try_header(&lines, idx) {
-                let node_idx = self.add_node(Kind::Header(lvl));
-                self.nodes[node_idx].text.push(text);
-                self.nodes[node_idx].open = false;
+            } else if self.try_header(&lines, idx).is_some() {
                 idx += 1;
             } else {
                 let mut node_idx = self.find_open_node(self.root);
@@ -182,7 +180,7 @@ impl<'a, 'b> Parser<'a> {
         None
     }
 
-    fn try_header(&mut self, lines: &[&'a str], idx: usize) -> Option<(usize, &'a str)> {
+    fn try_header(&mut self, lines: &[&'a str], idx: usize) -> Option<()> {
         lazy_static! {
             static ref RE: Regex = Regex::new(r"^\s*(\#{1,6})(\s+(.*?))?(\s+\#*)?\s*$").unwrap();
         }
@@ -191,9 +189,13 @@ impl<'a, 'b> Parser<'a> {
             let mut txt: &str = &"";
             if let Some(end_txt) = cap.get(2) {
                 let end_pos = end_txt.as_str().len();
-                txt = &lines[idx][lvl + 1..lvl+end_pos];
+                txt = &lines[idx][lvl + 1..lvl + end_pos];
             }
-            return Some((lvl, txt));
+
+            let node_idx = self.add_node(Kind::Header(lvl));
+            self.nodes[node_idx].text.push(txt);
+            self.nodes[node_idx].open = false;
+            return Some(());
         }
         None
     }
