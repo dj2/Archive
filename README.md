@@ -1,3 +1,5 @@
+[![Build/Test/Clippy](https://github.com/dj2/Archive/actions/workflows/rust.yml/badge.svg)](https://github.com/dj2/Archive/actions/workflows/rust.yml)
+
 # Archive
 Archive helps you maintain a set of notes and associated assets.
 
