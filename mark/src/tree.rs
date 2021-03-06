@@ -1,8 +1,20 @@
+//! The abstract syntax tree for the document. The root of the tree is a `Doc`
+//! node, the rest of the tree is made up of `Block` and `Inline` elements.
+
 use std::fmt;
 
+/// Representation of a markdown document.
 #[derive(Debug)]
 pub struct Doc<'a> {
-    pub blocks: Vec<Block<'a>>,
+    blocks: Vec<Block<'a>>,
+}
+impl<'a> Doc<'a> {
+    /// Create a new document with `blocks`
+    pub fn new(blocks: Vec<Block<'a>>) -> Self {
+        Self {
+            blocks
+        }
+    }
 }
 impl<'a> fmt::Display for Doc<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -16,10 +28,14 @@ impl<'a> fmt::Display for Doc<'a> {
     }
 }
 
+/// The block level elements in the document.
 #[derive(Debug, PartialEq)]
 pub enum Block<'a> {
+    /// A blockquote containing a set of blocks
     Blockquote(Vec<Block<'a>>),
+    /// A header with a given level and set of inline text.
     Header(usize, Vec<Inline<'a>>),
+    /// A paragraph with a given set of inline text.
     Paragraph(Vec<Inline<'a>>),
 }
 
@@ -61,8 +77,10 @@ impl<'a> fmt::Display for Block<'a> {
     }
 }
 
+/// Inline elements in the document.
 #[derive(Debug, PartialEq)]
 pub enum Inline<'a> {
+    /// Text content.
     Text(&'a str),
 }
 impl<'a> fmt::Display for Inline<'a> {
