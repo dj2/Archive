@@ -134,11 +134,11 @@ impl<'a, 'b> Parser<'a> {
             } else {
                 let mut node_idx = self.find_open_node(self.root);
                 if self.nodes[node_idx].text.is_empty() {
-                  self.nodes.push(Node::new(Kind::Paragraph));
-                  let val = self.nodes.len() - 1;
+                    self.nodes.push(Node::new(Kind::Paragraph));
+                    let val = self.nodes.len() - 1;
 
-                  self.nodes[node_idx].blocks.push(val);
-                  node_idx = val;
+                    self.nodes[node_idx].blocks.push(val);
+                    node_idx = val;
                 }
                 self.nodes[node_idx].text.push(&lines[idx]);
             }

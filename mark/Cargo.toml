@@ -8,5 +8,13 @@ license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/dj2/Archive/mark"
 
+[lib]
+name = "mark"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mark"
+path = "src/bin/main.rs"
 
 [dependencies]
+clap = { version = "2.33" }
