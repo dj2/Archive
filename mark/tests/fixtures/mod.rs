@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use difference::assert_diff;
 
 fn compare(name: &str) {
     let html = format!("tests/fixtures/data/{}.html", name);
@@ -20,7 +21,7 @@ fn compare(name: &str) {
         .unwrap();
 
     println!("{}", src);
-    assert_eq!(&result, &mark::to_html(&src));
+    assert_diff!(&mark::to_html(&src), &result, " ", 0);
 }
 
 #[test]
@@ -31,4 +32,9 @@ pub fn blockquote() {
 #[test]
 pub fn paragraphs() {
     compare("paragraphs")
+}
+
+#[test]
+pub fn headers() {
+    compare("headers")
 }

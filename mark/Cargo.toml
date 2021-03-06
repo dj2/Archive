@@ -18,3 +18,6 @@ path = "src/bin/main.rs"
 
 [dependencies]
 clap = { version = "2.33" }
+regex = { version = "1.4" }
+lazy_static = { version = "1.4" }
+difference = { version = "2.0" }

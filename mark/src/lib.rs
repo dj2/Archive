@@ -2,6 +2,9 @@ mod html;
 mod parser;
 mod tree;
 
+#[macro_use]
+extern crate lazy_static;
+
 use crate::html::Html;
 use crate::parser::Parser;
 use crate::tree::Doc;

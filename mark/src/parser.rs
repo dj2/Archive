@@ -1,9 +1,11 @@
 use crate::tree::{Block, Doc, Inline};
+use regex::Regex;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum Kind {
     Doc,
     Blockquote,
+    Header(usize),
     Paragraph,
 }
 #[derive(Clone, Debug)]
@@ -27,6 +29,7 @@ impl<'a> Node<'a> {
         match self.kind {
             Kind::Doc => false,
             Kind::Blockquote => true,
+            Kind::Header(_) => true,
             Kind::Paragraph => !(kind == Kind::Paragraph),
         }
     }
@@ -79,6 +82,16 @@ impl<'a, 'b> Parser<'a> {
                 }
                 Block::Blockquote(blocks)
             }
+            Kind::Header(lvl) => {
+              assert!(self.nodes[idx].blocks.is_empty());
+
+              // TODO(dj2): Parse inlines
+              let mut inlines = vec![];
+              for text in &self.nodes[idx].text {
+                inlines.push(Inline::Text(text));
+              }
+              Block::Header(lvl, inlines)
+            }
             Kind::Paragraph => {
                 assert!(self.nodes[idx].blocks.is_empty());
 
@@ -99,7 +112,6 @@ impl<'a, 'b> Parser<'a> {
                 return self.find_open_node(*i);
             }
         }
-
         idx
     }
 
@@ -122,9 +134,17 @@ impl<'a, 'b> Parser<'a> {
                 if self.nodes[node_idx].is_closed_by_hardbreak() {
                     self.nodes[node_idx].open = false
                 }
-            } else if let Some(consumed) = self.parse_blockquote(&lines, idx) {
+                idx += 1;
+            } else if let Some(consumed) = self.try_blockquote(&lines, idx) {
                 idx += consumed;
-                continue;
+            } else if let Some((lvl, text)) = self.try_header(&lines, idx) {
+                let parent = self.get_open_parent_for(Kind::Header(0));
+                self.nodes.push(Node::new(Kind::Header(lvl)));
+                let val = self.nodes.len() - 1;
+                self.nodes[parent].blocks.push(val);
+                self.nodes[val].text.push(text);
+                self.nodes[val].open = false;
+                idx += 1;
             } else {
                 let mut node_idx = self.find_open_node(self.root);
                 if self.nodes[node_idx].text.is_empty() {
@@ -135,12 +155,12 @@ impl<'a, 'b> Parser<'a> {
                     node_idx = val;
                 }
                 self.nodes[node_idx].text.push(&lines[idx]);
+                idx += 1;
             }
-            idx += 1;
         }
     }
 
-    fn parse_blockquote(&mut self, lines: &[&'a str], idx: usize) -> Option<usize> {
+    fn try_blockquote(&mut self, lines: &[&'a str], idx: usize) -> Option<usize> {
         let mut consumed = 0;
         let mut sub_lines: Vec<&'a str> = vec![];
 
@@ -164,6 +184,22 @@ impl<'a, 'b> Parser<'a> {
 
             self.parse_lines(&sub_lines);
             return Some(consumed);
+        }
+        None
+    }
+
+    fn try_header(&mut self, lines: &[&'a str], idx: usize) -> Option<(usize, &'a str)> {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"^\s*(\#{1,6})(\s+(.*?))?(\s+\#*)?\s*$").unwrap();
+        }
+        if let Some(cap) = RE.captures(lines[idx]) {
+            let lvl = cap.get(1).unwrap().as_str().len();
+            let mut txt: &str = &"";
+            if let Some(end_txt) = cap.get(2) {
+                let end_pos = end_txt.as_str().len();
+                txt = &lines[idx][lvl + 1..lvl+end_pos];
+            }
+            return Some((lvl, txt));
         }
         None
     }

@@ -19,6 +19,7 @@ impl<'a> fmt::Display for Doc<'a> {
 #[derive(Debug, PartialEq)]
 pub enum Block<'a> {
     Blockquote(Vec<Block<'a>>),
+    Header(usize, Vec<Inline<'a>>),
     Paragraph(Vec<Inline<'a>>),
 }
 
@@ -34,6 +35,16 @@ impl<'a> fmt::Display for Block<'a> {
                     write!(f, "{}", block.to_string())?;
                 }
                 write!(f, "</blockquote>")?;
+            }
+            Block::Header(lvl, inlines) => {
+                write!(f, "<h{}>", lvl)?;
+                for (i, inline) in inlines.iter().enumerate() {
+                    if i != 0 {
+                        writeln!(f,)?;
+                    }
+                    write!(f, "{}", inline.to_string())?;
+                }
+                write!(f, "</h{}>", lvl)?;
             }
             Block::Paragraph(inlines) => {
                 write!(f, "<p>")?;
