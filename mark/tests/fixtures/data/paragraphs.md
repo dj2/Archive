@@ -4,3 +4,7 @@ with two lines.
 And a second paragraph comes after the hard break.
 It has multiple lines as well.
 Three this time.
+
+
+   Trims    excess    whitespace
+   With many     lines
