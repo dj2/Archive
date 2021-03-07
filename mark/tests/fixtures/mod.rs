@@ -38,3 +38,8 @@ pub fn paragraphs() {
 pub fn headers() {
     compare("headers")
 }
+
+#[test]
+pub fn thematic_breaks() {
+    compare("thematic_breaks")
+}
