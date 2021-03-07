@@ -16,9 +16,10 @@ use crate::tree::{Block, Doc, Inline};
 use regex::Regex;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-enum Kind {
-    Doc,
+enum Kind<'a> {
     Blockquote,
+    Code(Option<&'a str>),
+    Doc,
     Header(usize),
     Paragraph,
     ThematicBreak,
@@ -29,13 +30,13 @@ enum Kind {
 /// optional as we want to be able to push new entries into the lists.
 #[derive(Clone, Debug)]
 struct Node<'a> {
-    kind: Kind,
+    kind: Kind<'a>,
     open: bool,
     blocks: Vec<usize>,
     text: Vec<&'a str>,
 }
 impl<'a> Node<'a> {
-    fn new(kind: Kind) -> Self {
+    fn new(kind: Kind<'a>) -> Self {
         Self {
             kind,
             open: true,
@@ -49,7 +50,7 @@ impl<'a> Node<'a> {
         match self.kind {
             Kind::Doc => false,
             Kind::Blockquote | Kind::Paragraph => !(kind == Kind::Paragraph),
-            Kind::Header(_) | Kind::ThematicBreak => true,
+            Kind::Header(_) | Kind::Code(_) | Kind::ThematicBreak => true,
         }
     }
 
@@ -96,6 +97,15 @@ impl<'a, 'b> Parser<'a> {
         match self.nodes[idx].kind {
             Kind::Doc => {
                 panic!("Should not call to_block on a document");
+            }
+            Kind::Code(lang) => {
+                assert!(self.nodes[idx].blocks.is_empty());
+
+                let mut inlines = vec![];
+                for text in &self.nodes[idx].text {
+                    inlines.push(Inline::Text(text));
+                }
+                Block::Code(lang, inlines)
             }
             Kind::Blockquote => {
                 assert!(self.nodes[idx].text.is_empty());
@@ -162,7 +172,7 @@ impl<'a, 'b> Parser<'a> {
 
     /// Creates a new node of `kind` and adds to the current open node. The
     /// id of the new node is returned.
-    fn add_node(&mut self, kind: Kind) -> usize {
+    fn add_node(&mut self, kind: Kind<'a>) -> usize {
         let parent = self.get_open_parent_for(kind);
         self.nodes.push(Node::new(kind));
 
@@ -177,7 +187,7 @@ impl<'a, 'b> Parser<'a> {
     }
 
     /// Adds the given `txt` to the node at `idx`.
-    fn add_node_text(&mut self, idx: usize, txt: &'a str) {
+    fn node_add_text(&mut self, idx: usize, txt: &'a str) {
         self.nodes[idx].text.push(txt);
     }
 
@@ -203,6 +213,8 @@ impl<'a, 'b> Parser<'a> {
                 idx += 1;
             } else if self.try_thematic_break(&lines, idx).is_some() {
                 idx += 1;
+            } else if let Some(consumed) = self.try_fenced_code(&lines, idx) {
+                idx += consumed;
             } else if let Some(consumed) = self.try_blockquote(&lines, idx) {
                 idx += consumed;
             } else if self.try_header(&lines, idx).is_some() {
@@ -212,7 +224,7 @@ impl<'a, 'b> Parser<'a> {
                 if !self.node_has_text(node_idx) {
                     node_idx = self.add_node(Kind::Paragraph);
                 }
-                self.add_node_text(node_idx, &lines[idx]);
+                self.node_add_text(node_idx, &lines[idx]);
                 idx += 1;
             }
         }
@@ -258,7 +270,7 @@ impl<'a, 'b> Parser<'a> {
             }
 
             let node_idx = self.add_node(Kind::Header(lvl));
-            self.add_node_text(node_idx, txt);
+            self.node_add_text(node_idx, txt);
             self.close_node(node_idx);
             return Some(());
         }
@@ -274,6 +286,52 @@ impl<'a, 'b> Parser<'a> {
             let node_idx = self.add_node(Kind::ThematicBreak);
             self.close_node(node_idx);
             return Some(());
+        }
+        None
+    }
+
+    /// Attempt to parse a fenced code block in `lines`. If a code block is
+    /// found, then consume the lines until the end of the block and return the
+    /// number of lines consumed.
+    fn try_fenced_code(&mut self, lines: &[&'a str], idx: usize) -> Option<usize> {
+        lazy_static! {
+            static ref START_RE: Regex = Regex::new(r"^(\s*)(`{3,}|~{3,})\s*([^\s]*).*$").unwrap();
+            static ref END_RE: Regex = Regex::new(r"^\s*(`{3,}|~{3,})\s*$").unwrap();
+        }
+
+        let mut consumed = 0;
+        if let Some(cap) = START_RE.captures(lines[idx]) {
+            let indent = cap.get(1).unwrap().as_str().len();
+            let marker = cap.get(2).unwrap().as_str().trim();
+            let lang_str = cap.get(3).unwrap().as_str();
+            let lang = if lang_str.is_empty() {
+                None
+            } else {
+                Some(lang_str)
+            };
+
+            let node = self.add_node(Kind::Code(lang));
+            consumed += 1;
+            while idx + consumed < lines.len() {
+                if let Some(cap) = END_RE.captures(lines[idx + consumed]) {
+                    let end_marker = cap.get(1).unwrap().as_str().trim();
+                    // End marker must be at least as long as the start marker
+                    // and it must be of the same type
+                    if end_marker.len() >= marker.len()
+                        && end_marker.chars().next() == marker.chars().next()
+                    {
+                        break;
+                    }
+                }
+                self.node_add_text(node, &lines[idx + consumed][indent..]);
+                consumed += 1;
+            }
+            // Make sure to consume the end marker.
+            consumed += 1;
+            if consumed > 0 {
+                self.close_node(node);
+                return Some(consumed);
+            }
         }
         None
     }
