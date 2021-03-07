@@ -317,8 +317,9 @@ impl<'a, 'b> Parser<'a> {
                     let end_marker = cap.get(1).unwrap().as_str().trim();
                     // End marker must be at least as long as the start marker
                     // and it must be of the same type
-                    if end_marker.len() >= marker.len() &&
-                            end_marker.chars().nth(0) == marker.chars().nth(0) {
+                    if end_marker.len() >= marker.len()
+                        && end_marker.chars().next() == marker.chars().next()
+                    {
                         break;
                     }
                 }

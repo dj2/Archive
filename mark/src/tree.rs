@@ -41,16 +41,14 @@ pub enum Block<'a> {
     ThematicBreak,
 }
 
-impl<'a> Block<'a> {
-    fn write_inlines(&self, f: &mut fmt::Formatter, inlines: &[Inline<'a>]) -> fmt::Result {
-        for (i, inline) in inlines.iter().enumerate() {
-            if i != 0 {
-                writeln!(f,)?;
-            }
-            write!(f, "{}", inline.to_string())?;
+fn write_inlines<'a>(f: &mut fmt::Formatter, inlines: &[Inline<'a>]) -> fmt::Result {
+    for (i, inline) in inlines.iter().enumerate() {
+        if i != 0 {
+            writeln!(f,)?;
         }
-        Ok(())
+        write!(f, "{}", inline.to_string())?;
     }
+    Ok(())
 }
 
 impl<'a> fmt::Display for Block<'a> {
@@ -72,17 +70,17 @@ impl<'a> fmt::Display for Block<'a> {
                     write!(f, " class='language-{}'", lang)?;
                 }
                 write!(f, ">")?;
-                self.write_inlines(f, inlines)?;
+                write_inlines(f, inlines)?;
                 write!(f, "</code></pre>")?;
             }
             Block::Header(lvl, inlines) => {
                 write!(f, "<h{}>", lvl)?;
-                self.write_inlines(f, inlines)?;
+                write_inlines(f, inlines)?;
                 write!(f, "</h{}>", lvl)?;
             }
             Block::Paragraph(inlines) => {
                 write!(f, "<p>")?;
-                self.write_inlines(f, inlines)?;
+                write_inlines(f, inlines)?;
                 write!(f, "</p>")?;
             }
             Block::ThematicBreak => {
