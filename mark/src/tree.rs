@@ -46,7 +46,9 @@ fn write_inlines<'a>(f: &mut fmt::Formatter, inlines: &[Inline<'a>]) -> fmt::Res
         if i != 0 {
             writeln!(f,)?;
         }
-        write!(f, "{}", inline.to_string())?;
+        let s = inline.to_string();
+        let strs: Vec<&str> = s.split_whitespace().collect();
+        write!(f, "{}", strs.join(" "))?;
     }
     Ok(())
 }
@@ -70,7 +72,15 @@ impl<'a> fmt::Display for Block<'a> {
                     write!(f, " class='language-{}'", lang)?;
                 }
                 write!(f, ">")?;
-                write_inlines(f, inlines)?;
+                // This does not use the generic `write_inlines` method because
+                // the the generic method trims and collapses whitespace which
+                // is not desired for code blocks.
+                for (i, inline) in inlines.iter().enumerate() {
+                    if i != 0 {
+                        writeln!(f,)?;
+                    }
+                    write!(f, "{}", inline.to_string())?;
+                }
                 write!(f, "</code></pre>")?;
             }
             Block::Header(lvl, inlines) => {
