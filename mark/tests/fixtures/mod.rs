@@ -21,7 +21,8 @@ fn compare(name: &str) {
         .unwrap();
 
     println!("{}", src);
-    assert_diff!(&result, &mark::to_html(&src), "\n", 0);
+    let actual = &mark::to_html(&src);
+    assert_diff!(&result, actual.trim_end(), "\n", 0);
 }
 
 #[test]

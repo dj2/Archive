@@ -17,10 +17,7 @@ impl<'a> Doc<'a> {
 impl<'a> fmt::Display for Doc<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for idx in 0..self.blocks.len() {
-            if idx > 0 {
-                writeln!(f,)?;
-            }
-            write!(f, "{}", self.blocks[idx].to_string())?;
+            writeln!(f, "{}", self.blocks[idx].to_string())?;
         }
         Ok(())
     }
@@ -42,6 +39,8 @@ pub enum Block<'a> {
 }
 
 fn write_inlines<'a>(f: &mut fmt::Formatter, inlines: &[Inline<'a>]) -> fmt::Result {
+    // Note, writeln! is not used here because we don't want to inject a newline
+    // into the last line of output.
     for (i, inline) in inlines.iter().enumerate() {
         if i != 0 {
             writeln!(f,)?;
@@ -58,13 +57,10 @@ impl<'a> fmt::Display for Block<'a> {
         match self {
             Block::Blockquote(blocks) => {
                 write!(f, "<blockquote>")?;
-                for (i, block) in blocks.iter().enumerate() {
-                    if i != 0 {
-                        writeln!(f,)?;
-                    }
+                for block in blocks.iter() {
                     write!(f, "{}", block.to_string())?;
                 }
-                write!(f, "</blockquote>")?;
+                writeln!(f, "</blockquote>")?;
             }
             Block::Code(lang, inlines) => {
                 write!(f, "<pre><code")?;
@@ -75,26 +71,29 @@ impl<'a> fmt::Display for Block<'a> {
                 // This does not use the generic `write_inlines` method because
                 // the the generic method trims and collapses whitespace which
                 // is not desired for code blocks.
+                //
+                // writeln! is not used here because we don't want a newline on
+                // the last line of text.
                 for (i, inline) in inlines.iter().enumerate() {
                     if i != 0 {
                         writeln!(f,)?;
                     }
                     write!(f, "{}", inline.to_string())?;
                 }
-                write!(f, "</code></pre>")?;
+                writeln!(f, "</code></pre>")?;
             }
             Block::Header(lvl, inlines) => {
                 write!(f, "<h{}>", lvl)?;
                 write_inlines(f, inlines)?;
-                write!(f, "</h{}>", lvl)?;
+                writeln!(f, "</h{}>", lvl)?;
             }
             Block::Paragraph(inlines) => {
                 write!(f, "<p>")?;
                 write_inlines(f, inlines)?;
-                write!(f, "</p>")?;
+                writeln!(f, "</p>")?;
             }
             Block::ThematicBreak => {
-                write!(f, "<hr />")?;
+                writeln!(f, "<hr />")?;
             }
         };
         Ok(())
