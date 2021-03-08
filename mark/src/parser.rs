@@ -140,6 +140,22 @@ impl<'a, 'b> Parser<'a> {
         Doc::new(blocks)
     }
 
+    fn convert_inlines(&self, idx: usize) -> Vec<Inline<'a>> {
+        let mut inlines = vec![];
+        for text in &self.nodes[idx].text {
+            inlines.push(Inline::Text(text));
+        }
+        inlines
+    }
+
+    fn convert_blocks(&self, idx: usize) -> Vec<Block<'a>> {
+        let mut blocks = vec![];
+        for n in &self.nodes[idx].blocks {
+            blocks.push(self.to_block(*n));
+        }
+        blocks
+    }
+
     /// Converts the node at `idx` into a corresponding block.
     fn to_block(&self, idx: usize) -> Block<'a> {
         match self.nodes[idx].kind {
@@ -148,59 +164,27 @@ impl<'a, 'b> Parser<'a> {
             }
             Kind::Code(lang) => {
                 assert!(self.nodes[idx].blocks.is_empty());
-
-                let mut inlines = vec![];
-                for text in &self.nodes[idx].text {
-                    inlines.push(Inline::Text(text));
-                }
-                Block::Code(lang, inlines)
+                Block::Code(lang, self.convert_inlines(idx))
             }
             Kind::Blockquote => {
                 assert!(self.nodes[idx].text.is_empty());
-
-                let mut blocks = vec![];
-                for n in &self.nodes[idx].blocks {
-                    blocks.push(self.to_block(*n));
-                }
-                Block::Blockquote(blocks)
+                Block::Blockquote(self.convert_blocks(idx))
             }
             Kind::Header(lvl) => {
                 assert!(self.nodes[idx].blocks.is_empty());
-
-                // TODO(dj2): Parse inlines
-                let mut inlines = vec![];
-                for text in &self.nodes[idx].text {
-                    inlines.push(Inline::Text(text));
-                }
-                Block::Header(lvl, inlines)
+                Block::Header(lvl, self.convert_inlines(idx))
             }
             Kind::List(_, marker, _, start) => {
                 assert!(self.nodes[idx].text.is_empty());
-
-                let mut blocks = vec![];
-                for n in &self.nodes[idx].blocks {
-                    blocks.push(self.to_block(*n));
-                }
-                Block::List(marker, start, blocks)
+                Block::List(marker, start, self.convert_blocks(idx))
             }
             Kind::ListElement => {
                 assert!(self.nodes[idx].text.is_empty());
-
-                let mut blocks = vec![];
-                for n in &self.nodes[idx].blocks {
-                    blocks.push(self.to_block(*n));
-                }
-                Block::ListElement(blocks)
+                Block::ListElement(self.convert_blocks(idx))
             }
             Kind::Paragraph => {
                 assert!(self.nodes[idx].blocks.is_empty());
-
-                // TODO(dj2): Parse inlines
-                let mut inlines = vec![];
-                for text in &self.nodes[idx].text {
-                    inlines.push(Inline::Text(text));
-                }
-                Block::Paragraph(inlines)
+                Block::Paragraph(self.convert_inlines(idx))
             }
             Kind::ThematicBreak => Block::ThematicBreak,
         }
