@@ -1,5 +1,5 @@
 //! The abstract syntax tree for the document. The root of the tree is a `Doc`
-//! node, the rest of the tree is made up of `Block` and `Inline` elements.
+//! node, the rest of the tree is made up of `Block` elements.
 
 use std::fmt;
 
@@ -41,29 +41,19 @@ pub enum Block<'a> {
     /// A blockquote containing a set of blocks.
     Blockquote(Vec<Block<'a>>),
     /// A code block. Provides an optional language and the text lines.
-    Code(Option<&'a str>, Vec<Inline<'a>>),
+    Code(Option<&'a str>, Vec<Block<'a>>),
     /// A header with a given level and set of inline text.
-    Header(usize, Vec<Inline<'a>>),
+    Header(usize, Vec<Block<'a>>),
     List(Marker, u32 /* start */, Vec<Block<'a>>),
     ListElement(Vec<Block<'a>>),
     /// A paragraph with a given set of inline text.
-    Paragraph(Vec<Inline<'a>>),
+    Paragraph(Vec<Block<'a>>),
     /// A thematic break.
     ThematicBreak,
-}
-
-fn write_inlines<'a>(f: &mut fmt::Formatter, inlines: &[Inline<'a>]) -> fmt::Result {
-    // Note, writeln! is not used here because we don't want to inject a newline
-    // into the last line of output.
-    for (i, inline) in inlines.iter().enumerate() {
-        if i != 0 {
-            writeln!(f,)?;
-        }
-        let s = inline.to_string();
-        let strs: Vec<&str> = s.split_whitespace().collect();
-        write!(f, "{}", strs.join(" "))?;
-    }
-    Ok(())
+    /// A text block
+    Text(&'a str),
+    /// A raw text block. No formatting is done on the output
+    RawText(&'a str),
 }
 
 fn write_blocks<'a>(f: &mut fmt::Formatter, blocks: &[Block<'a>]) -> fmt::Result {
@@ -81,29 +71,18 @@ impl<'a> fmt::Display for Block<'a> {
                 write_blocks(f, blocks)?;
                 writeln!(f, "</blockquote>")?;
             }
-            Block::Code(lang, inlines) => {
+            Block::Code(lang, lines) => {
                 write!(f, "<pre><code")?;
                 if let Some(lang) = lang {
                     write!(f, " class='language-{}'", lang)?;
                 }
                 write!(f, ">")?;
-                // This does not use the generic `write_inlines` method because
-                // the the generic method trims and collapses whitespace which
-                // is not desired for code blocks.
-                //
-                // writeln! is not used here because we don't want a newline on
-                // the last line of text.
-                for (i, inline) in inlines.iter().enumerate() {
-                    if i != 0 {
-                        writeln!(f,)?;
-                    }
-                    write!(f, "{}", inline.to_string())?;
-                }
+                write_blocks(f, lines)?;
                 writeln!(f, "</code></pre>")?;
             }
-            Block::Header(lvl, inlines) => {
+            Block::Header(lvl, content) => {
                 write!(f, "<h{}>", lvl)?;
-                write_inlines(f, inlines)?;
+                write_blocks(f, content)?;
                 writeln!(f, "</h{}>", lvl)?;
             }
             Block::List(marker, start, blocks) => {
@@ -130,29 +109,18 @@ impl<'a> fmt::Display for Block<'a> {
                 write_blocks(f, blocks)?;
                 writeln!(f, "</li>")?;
             }
-            Block::Paragraph(inlines) => {
+            Block::Paragraph(blocks) => {
                 write!(f, "<p>")?;
-                write_inlines(f, inlines)?;
+                write_blocks(f, blocks)?;
                 writeln!(f, "</p>")?;
             }
-            Block::ThematicBreak => {
-                writeln!(f, "<hr />")?;
+            Block::Text(txt) => {
+                let s = (*txt).to_string();
+                let strs: Vec<&str> = s.split_whitespace().collect();
+                write!(f, "{}", strs.join(" "))?;
             }
-        };
-        Ok(())
-    }
-}
-
-/// Inline elements in the document.
-#[derive(Debug, PartialEq)]
-pub enum Inline<'a> {
-    /// Text content.
-    Text(&'a str),
-}
-impl<'a> fmt::Display for Inline<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Inline::Text(s) => write!(f, "{}", s)?,
+            Block::ThematicBreak => writeln!(f, "<hr />")?,
+            Block::RawText(txt) => write!(f, "{}", txt)?,
         };
         Ok(())
     }
