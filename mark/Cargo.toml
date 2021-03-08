@@ -22,4 +22,4 @@ regex = { version = "1.4" }
 lazy_static = { version = "1.4" }
 
 [dev-dependencies]
-difference = { version = "2.0" }
+pretty_assertions = { version = "0.6" }
