@@ -49,3 +49,8 @@ pub fn thematic_breaks() {
 pub fn fenced_code() {
     compare("fenced_code")
 }
+
+#[test]
+pub fn list() {
+    compare("list")
+}

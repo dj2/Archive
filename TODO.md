@@ -24,9 +24,9 @@
  * [ ] Strong *strong*
  * [ ] Superscript e^2^
  * [ ] Subscript e~2~
- * [ ] Lists
-   * [ ] Ordered (lower alpha, upper alpha, lower roman, upper roman, number)
-   * [ ] Unordered
+ * [x] Lists
+   * [x] Ordered (lower alpha, upper alpha, lower roman, upper roman, number)
+   * [x] Unordered
  * [x] Thematic breaks (---, ***, ___)
  * [x] Code blocks (fenced only, no indented code blocks)
  * [ ] Inline code blocks

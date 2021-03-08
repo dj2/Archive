@@ -12,15 +12,63 @@
 //! The second pass passes any inlines like emphasis as well as resolving link
 //! targets. The output of the second pass a tree of `Block`s which are the
 //! the final representation of the document.
-use crate::tree::{Block, Doc, Inline};
+use crate::tree::{Block, Doc, Inline, Marker};
 use regex::Regex;
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+enum MarkerClose {
+    None,
+    Dot,
+    Bracket,
+}
+
+fn parse_marker(marker: &'_ str) -> (Marker, MarkerClose, u32) {
+    let mut chars = marker.chars();
+    let marker_first = chars.next();
+    let marker_close = match chars.last() {
+        Some(')') => MarkerClose::Bracket,
+        Some('.') => MarkerClose::Dot,
+        _ => MarkerClose::None,
+    };
+
+    let mut marker_start = 1;
+    let marker_kind = match marker_first {
+        Some('*') => Marker::Bullet,
+        Some('-') => Marker::Dash,
+        Some('+') => Marker::Plus,
+        Some('i') => Marker::LowerRoman,
+        Some('I') => Marker::UpperRoman,
+        Some(x) if ('a'..='z').contains(&x) => {
+            marker_start = (x as u32) - ('a' as u32) + 1;
+            Marker::LowerAlpha
+        }
+        Some(x) if ('A'..='Z').contains(&x) => {
+            marker_start = (x as u32) - ('A' as u32) + 1;
+            Marker::UpperAlpha
+        }
+        _ => {
+            if let Ok(val) = marker[0..marker.len() - 1].to_string().parse::<u32>() {
+                marker_start = val;
+            }
+            Marker::Numeric
+        }
+    };
+    (marker_kind, marker_close, marker_start)
+}
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum Kind<'a> {
     Blockquote,
     Code(Option<&'a str>),
     Doc,
-    Header(usize),
+    Header(usize /* level */),
+    List(
+        usize, /* indent */
+        Marker,
+        MarkerClose,
+        u32, /* start value */
+    ),
+    ListElement,
     Paragraph,
     ThematicBreak,
 }
@@ -48,9 +96,9 @@ impl<'a> Node<'a> {
     /// Determines if the current node is closed by a node of `kind`.
     fn is_closed_by(&self, kind: Kind) -> bool {
         match self.kind {
-            Kind::Doc => false,
+            Kind::Doc | Kind::ListElement => false,
             Kind::Blockquote | Kind::Paragraph => !(kind == Kind::Paragraph),
-            Kind::Header(_) | Kind::Code(_) | Kind::ThematicBreak => true,
+            _ => true,
         }
     }
 
@@ -126,6 +174,24 @@ impl<'a, 'b> Parser<'a> {
                 }
                 Block::Header(lvl, inlines)
             }
+            Kind::List(_, marker, _, start) => {
+                assert!(self.nodes[idx].text.is_empty());
+
+                let mut blocks = vec![];
+                for n in &self.nodes[idx].blocks {
+                    blocks.push(self.to_block(*n));
+                }
+                Block::List(marker, start, blocks)
+            }
+            Kind::ListElement => {
+                assert!(self.nodes[idx].text.is_empty());
+
+                let mut blocks = vec![];
+                for n in &self.nodes[idx].blocks {
+                    blocks.push(self.to_block(*n));
+                }
+                Block::ListElement(blocks)
+            }
             Kind::Paragraph => {
                 assert!(self.nodes[idx].blocks.is_empty());
 
@@ -156,6 +222,33 @@ impl<'a, 'b> Parser<'a> {
         idx
     }
 
+    fn find_parent_list(
+        &self,
+        idx: usize,
+        indent: usize,
+        marker: Marker,
+        marker_close: MarkerClose,
+    ) -> Option<usize> {
+        let node = self.nodes[idx].blocks.last();
+        if let Some(i) = node {
+            if self.nodes[*i].open {
+                if let Some(ret) = self.find_parent_list(*i, indent, marker, marker_close) {
+                    return Some(ret);
+                }
+
+                if let Kind::List(ind, marker_kind, close, _) = self.nodes[*i].kind {
+                    // If the indent level matches, the marker is the same
+                    // and the marker close are the same, then this is
+                    // the list we attach too.
+                    if ind == indent && marker_kind == marker && close == marker_close {
+                        return Some(*i);
+                    }
+                }
+            }
+        }
+        None
+    }
+
     /// Given a node of `kind` find the first open node in which we can append
     /// `kind`. Any open nodes which are closed by `kind` will be marked as
     /// closed.
@@ -170,15 +263,19 @@ impl<'a, 'b> Parser<'a> {
         }
     }
 
-    /// Creates a new node of `kind` and adds to the current open node. The
-    /// id of the new node is returned.
-    fn add_node(&mut self, kind: Kind<'a>) -> usize {
-        let parent = self.get_open_parent_for(kind);
+    fn add_node_to_parent(&mut self, parent: usize, kind: Kind<'a>) -> usize {
         self.nodes.push(Node::new(kind));
 
         let val = self.nodes.len() - 1;
         self.nodes[parent].blocks.push(val);
         val
+    }
+
+    /// Creates a new node of `kind` and adds to the current open node. The
+    /// id of the new node is returned.
+    fn add_node(&mut self, kind: Kind<'a>) -> usize {
+        let parent = self.get_open_parent_for(kind);
+        self.add_node_to_parent(parent, kind)
     }
 
     /// Marks node at `idx` as closed.
@@ -211,14 +308,16 @@ impl<'a, 'b> Parser<'a> {
                     self.close_node(node_idx);
                 }
                 idx += 1;
-            } else if self.try_thematic_break(&lines, idx).is_some() {
+            } else if self.try_thematic_break(&lines, idx).is_some()
+                || self.try_header(&lines, idx).is_some()
+            {
                 idx += 1;
             } else if let Some(consumed) = self.try_fenced_code(&lines, idx) {
                 idx += consumed;
             } else if let Some(consumed) = self.try_blockquote(&lines, idx) {
                 idx += consumed;
-            } else if self.try_header(&lines, idx).is_some() {
-                idx += 1;
+            } else if let Some(consumed) = self.try_list(&lines, idx) {
+                idx += consumed;
             } else {
                 let mut node_idx = self.find_open_node(self.root);
                 if !self.node_has_text(node_idx) {
@@ -330,6 +429,84 @@ impl<'a, 'b> Parser<'a> {
             consumed += 1;
             if consumed > 0 {
                 self.close_node(node);
+                return Some(consumed);
+            }
+        }
+        None
+    }
+
+    /// Attempt to parse a list in `lines`. If a list is found, then
+    /// consume the lines until the end of the list and returns the number
+    /// of lines consumed.
+    fn try_list(&mut self, lines: &[&'a str], idx: usize) -> Option<usize> {
+        lazy_static! {
+            static ref RE: Regex =
+                Regex::new(r"^(\s*(?:\*|\+|\-|(?:(?:[0-9]{1,9}|[a-z]|[A-Z])(?:\.|\)))))(\s+.*)?$")
+                    .unwrap();
+            static ref SPACE_RE: Regex = Regex::new(r"^(\s*)").unwrap();
+        }
+
+        if let Some(cap) = RE.captures(lines[idx]) {
+            let marker = cap.get(1).unwrap().as_str();
+            // Subsequent lines must indent to marker + 1.
+            let indent = marker.len() + 1;
+            let (marker_kind, marker_close, marker_start) = parse_marker(marker.trim());
+
+            let mut consumed = 1;
+            let mut sub_lines: Vec<&'a str> = vec![&lines[idx][indent..]];
+            while idx + consumed < lines.len() {
+                if let Some(space_cap) = SPACE_RE.captures(lines[idx + consumed]) {
+                    let sp = space_cap.get(1).unwrap().as_str();
+                    // If the amount of space is at least as much as the marker
+                    // but the line is not just whitespace.
+                    if sp.len() < indent && sp.len() != lines[idx + consumed].len() {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+
+                if lines[idx + consumed].trim().is_empty() {
+                    sub_lines.push(&lines[idx + consumed]);
+                } else {
+                    // Strip the marker space from the start of the line.
+                    sub_lines.push(&lines[idx + consumed][indent..]);
+                }
+                consumed += 1;
+            }
+            if consumed > 0 {
+                // We've found what could be a list element, we need to determine
+                // if it's really a list element or we need to revert to text.
+
+                // First, get the current open node, if it's a paragraph then we
+                // look at the marker and only allow certain makers to break the
+                // paragraph.
+                let open_node = self.find_open_node(self.root);
+                if self.nodes[open_node].kind == Kind::Paragraph {
+                    // Ordered markers must start with 1 to break a paragraph
+                    if (marker_kind == Marker::Numeric
+                        || marker_kind == Marker::UpperAlpha
+                        || marker_kind == Marker::LowerAlpha)
+                        && marker_start != 1
+                    {
+                        return None;
+                    }
+                }
+
+                let parent = self.find_parent_list(self.root, indent, marker_kind, marker_close);
+                let parent_idx = parent.map_or_else(
+                    // We didn't find a parent to add too, so find the open node,
+                    // and add the list.
+                    || self.add_node(Kind::List(indent, marker_kind, marker_close, marker_start)),
+                    // Found a list which matches this new element so we'll append
+                    // to that list instead of creating a new one.
+                    |idx| idx,
+                );
+
+                // Add the element, parse it's contents and then close the element.
+                let li = self.add_node_to_parent(parent_idx, Kind::ListElement);
+                self.parse_lines(&sub_lines);
+                self.close_node(li);
                 return Some(consumed);
             }
         }
