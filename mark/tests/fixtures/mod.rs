@@ -54,3 +54,9 @@ pub fn fenced_code() {
 pub fn list() {
     compare("list")
 }
+
+#[test]
+pub fn em() {
+    compare("em")
+}
+

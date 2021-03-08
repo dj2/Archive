@@ -74,6 +74,7 @@ enum Kind<'a> {
 
     Text(&'a str),
     RawText(&'a str),
+    Emphasis,
 }
 
 /// A node holds information about a given block in the document. The node
@@ -96,30 +97,20 @@ impl<'a> Node<'a> {
 
     /// Determines if the current node is closed by a node of `kind`.
     fn is_closed_by(&self, kind: Kind) -> bool {
+        if kind == Kind::Emphasis {
+            return false;
+        }
+        if let Kind::Text(_) = kind {
+            return false;
+        }
+        if let Kind::RawText(_) = kind {
+            return false;
+        }
+
         match self.kind {
+
             Kind::Doc | Kind::ListElement => false,
-            Kind::Blockquote => kind != Kind::Paragraph,
-            Kind::Paragraph => {
-                if kind == Kind::Paragraph {
-                    return false;
-                }
-                if let Kind::Text(_) = kind {
-                    return false;
-                }
-                if let Kind::RawText(_) = kind {
-                    return false;
-                }
-                true
-            }
-            Kind::Header(_) | Kind::Code(_) => {
-                if let Kind::Text(_) = kind {
-                    return false;
-                }
-                if let Kind::RawText(_) = kind {
-                    return false;
-                }
-                true
-            }
+            Kind::Blockquote | Kind::Paragraph | Kind::Header(_) => kind != Kind::Paragraph,
             _ => true,
         }
     }
@@ -183,6 +174,7 @@ impl<'a, 'b> Parser<'a> {
             Kind::ThematicBreak => Block::ThematicBreak,
             Kind::Text(txt) => Block::Text(txt),
             Kind::RawText(txt) => Block::RawText(txt),
+            Kind::Emphasis => Block::Emphasis(self.convert_blocks(idx)),
         }
     }
 
@@ -305,9 +297,29 @@ impl<'a, 'b> Parser<'a> {
                 } else {
                     self.add_node(Kind::Paragraph);
                 }
-                self.add_text_node(&lines[idx]);
+                self.parse_inlines(&lines[idx]);
                 idx += 1;
             }
+        }
+    }
+
+    /// Parses the given line for inline elements
+    fn parse_inlines(&mut self, line: &'a str) {
+        let chars: Vec<(usize, char)> = line.char_indices().collect();
+        let count = chars.len();
+        let mut start_idx = 0;
+        let mut idx = 0;
+        while idx < count {
+            if let Some(pos, ch) = chars[idx] {
+                match ch {
+                    '*' => {
+                    }
+                    _ => {}
+                }
+            }
+        }
+        if idx > start_idx {
+            self.add_text_node(line[start_idx..);
         }
     }
 
@@ -351,7 +363,7 @@ impl<'a, 'b> Parser<'a> {
             }
 
             let node_idx = self.add_node(Kind::Header(lvl));
-            self.add_text_node(txt);
+            self.parse_inlines(txt);
             self.close_node(node_idx);
             return Some(());
         }
