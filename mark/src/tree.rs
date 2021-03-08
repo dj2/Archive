@@ -23,6 +23,18 @@ impl<'a> fmt::Display for Doc<'a> {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Marker {
+    Bullet,
+    Dash,
+    Plus,
+    UpperAlpha,
+    LowerAlpha,
+    UpperRoman,
+    LowerRoman,
+    Numeric,
+}
+
 /// The block level elements in the document.
 #[derive(Debug, PartialEq)]
 pub enum Block<'a> {
@@ -32,6 +44,8 @@ pub enum Block<'a> {
     Code(Option<&'a str>, Vec<Inline<'a>>),
     /// A header with a given level and set of inline text.
     Header(usize, Vec<Inline<'a>>),
+    List(Marker, u32 /* start */, Vec<Block<'a>>),
+    ListElement(Vec<Block<'a>>),
     /// A paragraph with a given set of inline text.
     Paragraph(Vec<Inline<'a>>),
     /// A thematic break.
@@ -52,14 +66,19 @@ fn write_inlines<'a>(f: &mut fmt::Formatter, inlines: &[Inline<'a>]) -> fmt::Res
     Ok(())
 }
 
+fn write_blocks<'a>(f: &mut fmt::Formatter, blocks: &[Block<'a>]) -> fmt::Result {
+    for block in blocks.iter() {
+        write!(f, "{}", block.to_string())?;
+    }
+    Ok(())
+}
+
 impl<'a> fmt::Display for Block<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Block::Blockquote(blocks) => {
                 write!(f, "<blockquote>")?;
-                for block in blocks.iter() {
-                    write!(f, "{}", block.to_string())?;
-                }
+                write_blocks(f, blocks)?;
                 writeln!(f, "</blockquote>")?;
             }
             Block::Code(lang, inlines) => {
@@ -86,6 +105,30 @@ impl<'a> fmt::Display for Block<'a> {
                 write!(f, "<h{}>", lvl)?;
                 write_inlines(f, inlines)?;
                 writeln!(f, "</h{}>", lvl)?;
+            }
+            Block::List(marker, start, blocks) => {
+                let (list, attr) = match marker {
+                    Marker::Bullet => ("ul", ""),
+                    Marker::Dash => ("ul", " style='list-style-type:circle'"),
+                    Marker::Plus => ("ul", " style='list-style-type:square'"),
+                    Marker::UpperAlpha => ("ol", " type='A'"),
+                    Marker::LowerAlpha => ("ol", " type='a'"),
+                    Marker::UpperRoman => ("ol", " type='I'"),
+                    Marker::LowerRoman => ("ol", " type='i'"),
+                    Marker::Numeric => ("ol", ""),
+                };
+                let mut attr = attr.to_string();
+                if *start != 1 {
+                    attr = format!("{} start='{}'", attr, *start);
+                }
+                writeln!(f, "<{}{}>", list, attr)?;
+                write_blocks(f, blocks)?;
+                writeln!(f, "</{}>", list)?;
+            }
+            Block::ListElement(blocks) => {
+                write!(f, "<li>")?;
+                write_blocks(f, blocks)?;
+                writeln!(f, "</li>")?;
             }
             Block::Paragraph(inlines) => {
                 write!(f, "<p>")?;
