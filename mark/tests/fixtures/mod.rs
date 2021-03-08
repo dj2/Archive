@@ -1,4 +1,4 @@
-use difference::assert_diff;
+use pretty_assertions::assert_eq;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -22,7 +22,7 @@ fn compare(name: &str) {
 
     println!("{}", src);
     let actual = &mark::to_html(&src);
-    assert_diff!(&result, actual.trim_end(), "\n", 0);
+    assert_eq!(result, actual.trim_end());
 }
 
 #[test]
