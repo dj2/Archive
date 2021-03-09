@@ -87,9 +87,7 @@ impl<'a> fmt::Display for Block<'a> {
             }
             Block::List(marker, start, blocks) => {
                 let (list, attr) = match marker {
-                    Marker::Bullet => ("ul", ""),
-                    Marker::Dash => ("ul", " style='list-style-type:circle'"),
-                    Marker::Plus => ("ul", " style='list-style-type:square'"),
+                    Marker::Bullet | Marker::Dash | Marker::Plus => ("ul", ""),
                     Marker::UpperAlpha => ("ol", " type='A'"),
                     Marker::LowerAlpha => ("ol", " type='a'"),
                     Marker::UpperRoman => ("ol", " type='I'"),
@@ -105,7 +103,7 @@ impl<'a> fmt::Display for Block<'a> {
                 writeln!(f, "</{}>", list)?;
             }
             Block::ListElement(blocks) => {
-                write!(f, "<li>")?;
+                writeln!(f, "<li>")?;
                 write_blocks(f, blocks)?;
                 writeln!(f, "</li>")?;
             }

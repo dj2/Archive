@@ -199,9 +199,7 @@ impl<'a, 'b> Parser<'a> {
             Kind::Code(lang) => Block::Code(lang, self.convert_blocks(idx)),
             Kind::Blockquote => Block::Blockquote(self.convert_blocks(idx)),
             Kind::Header(lvl) => Block::Header(lvl, self.convert_blocks(idx)),
-            Kind::List(_, marker, _, start) => {
-                Block::List(marker, start, self.convert_blocks(idx))
-            }
+            Kind::List(_, marker, _, start) => Block::List(marker, start, self.convert_blocks(idx)),
             Kind::ListElement => Block::ListElement(self.convert_blocks(idx)),
             Kind::Paragraph => Block::Paragraph(self.convert_blocks(idx)),
             Kind::ThematicBreak => Block::ThematicBreak,
@@ -244,7 +242,7 @@ impl<'a, 'b> Parser<'a> {
                     // If the indent level matches, the marker is the same
                     // and the marker close are the same, then this is
                     // the list we attach too.
-                    if ind == indent && marker_kind == marker && close == marker_close {
+                    if ind <= indent && marker_kind == marker && close == marker_close {
                         return Some(*i);
                     }
                 }
@@ -420,7 +418,8 @@ impl<'a, 'b> Parser<'a> {
         let mut sub_lines: Vec<&'a str> = vec![];
 
         while idx + consumed < lines.len() {
-            if !lines[idx + consumed].starts_with("> ") {
+            if !lines[idx + consumed].starts_with("> ") && !lines[idx + consumed].starts_with(">\t")
+            {
                 break;
             }
             // Strip the '> ' from the start of the blockquote.
