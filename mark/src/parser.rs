@@ -116,7 +116,6 @@ impl<'a> Node<'a> {
     }
 }
 
-
 fn is_inline_open(left: Option<&(usize, char)>, right: Option<&(usize, char)>) -> bool {
     if let Some((_, left_char)) = left {
         if !left_char.is_whitespace() {
@@ -200,7 +199,9 @@ impl<'a, 'b> Parser<'a> {
             Kind::Code(lang) => Block::Code(lang, self.convert_blocks(idx)),
             Kind::Blockquote => Block::Blockquote(self.convert_blocks(idx)),
             Kind::Header(lvl) => Block::Header(lvl, self.convert_blocks(idx)),
-            Kind::List(_, marker, _, start) => Block::List(marker, start, self.convert_blocks(idx)),
+            Kind::List(_, marker, _, start) => {
+                Block::List(marker, start, self.convert_blocks(idx))
+            }
             Kind::ListElement => Block::ListElement(self.convert_blocks(idx)),
             Kind::Paragraph => Block::Paragraph(self.convert_blocks(idx)),
             Kind::ThematicBreak => Block::ThematicBreak,
@@ -329,30 +330,76 @@ impl<'a, 'b> Parser<'a> {
         }
     }
 
+    fn process_inline_char(
+        &mut self,
+        kind: Kind<'a>,
+        line: &'a str,
+        prev: Option<&(usize, char)>,
+        next: Option<&(usize, char)>,
+        start: usize,
+        end: usize,
+    ) -> bool {
+        if is_inline_open(prev, next) {
+            self.add_text_node(&line[start..end]);
+            self.add_node(kind);
+            true
+        } else if is_inline_close(prev, next) {
+            self.add_text_node(&line[start..end]);
+            self.close_node(self.find_open_node(self.root));
+            true
+        } else {
+            false
+        }
+    }
+
     /// Parses the given line for inline elements
     fn parse_inlines(&mut self, line: &'a str) {
         let chars: Vec<(usize, char)> = line.char_indices().collect();
         let count = chars.len();
         let mut start_idx = 0;
-        let mut el = |kind, idx, pos| {
-            if is_inline_open(chars.get(idx - 1), chars.get(idx + 1)) {
-                self.add_text_node(&line[chars[start_idx].0..pos]);
-                self.add_node(kind);
-                start_idx = idx + 1;
-            } else if is_inline_close(chars.get(idx - 1), chars.get(idx + 1)) {
-                self.add_text_node(&line[chars[start_idx].0..pos]);
-                self.close_node(self.find_open_node(self.root));
-                start_idx = idx + 1;
-            }
-        };
-
         let mut idx = 0;
         while idx < count {
             let (pos, ch) = chars[idx];
+            let prev = if idx > 0 { chars.get(idx - 1) } else { None };
+            let next = chars.get(idx + 1);
+            let start = chars[start_idx].0;
             match ch {
-                '_' => el(Kind::Inline("em"), idx, pos),
-                '*' => el(Kind::Inline("strong"), idx, pos),
-                '`' => el(Kind::Inline("code"), idx, pos),
+                '_' => {
+                    if self.process_inline_char(Kind::Inline("em"), line, prev, next, start, pos) {
+                        start_idx = idx + 1;
+                    }
+                }
+                '*' => {
+                    if self.process_inline_char(
+                        Kind::Inline("strong"),
+                        line,
+                        prev,
+                        next,
+                        start,
+                        pos,
+                    ) {
+                        start_idx = idx + 1;
+                    }
+                }
+                '`' => {
+                    if self.process_inline_char(Kind::Inline("code"), line, prev, next, start, pos)
+                    {
+                        start_idx = idx + 1;
+                    }
+                }
+                '\\' => {
+                    // Handle unescaping escaped characters
+                    if let Some((_, nxt_ch)) = chars.get(idx + 1) {
+                        match nxt_ch {
+                            '#' | '*' => {
+                                self.add_text_node(&line[start..pos]);
+                                start_idx = idx + 1;
+                                idx += 1;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
                 _ => {}
             }
             idx += 1;
@@ -396,9 +443,10 @@ impl<'a, 'b> Parser<'a> {
         if let Some(cap) = RE.captures(lines[idx]) {
             let lvl = cap.get(1).unwrap().as_str().len();
             let mut txt: &str = &"";
-            if let Some(end_txt) = cap.get(2) {
-                let end_pos = end_txt.as_str().len();
-                txt = &lines[idx][lvl + 1..lvl + end_pos];
+            if let Some(end_txt) = cap.get(3) {
+                // In the case where the header is `### ###` we end up with the second `###`
+                // as the match, so trim leading matches to turn it into a blank string.
+                txt = end_txt.as_str().trim_start_matches('#');
             }
 
             let node_idx = self.add_node(Kind::Header(lvl));

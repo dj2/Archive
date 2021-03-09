@@ -17,7 +17,7 @@ impl<'a> Doc<'a> {
 impl<'a> fmt::Display for Doc<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for idx in 0..self.blocks.len() {
-            writeln!(f, "{}", self.blocks[idx].to_string())?;
+            write!(f, "{}", self.blocks[idx].to_string())?;
         }
         Ok(())
     }
