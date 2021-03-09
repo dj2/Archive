@@ -352,6 +352,7 @@ impl<'a, 'b> Parser<'a> {
             match ch {
                 '_' => el(Kind::Inline("em"), idx, pos),
                 '*' => el(Kind::Inline("strong"), idx, pos),
+                '`' => el(Kind::Inline("code"), idx, pos),
                 _ => {}
             }
             idx += 1;

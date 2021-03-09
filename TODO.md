@@ -29,7 +29,7 @@
    * [x] Unordered
  * [x] Thematic breaks (---, ***, ___)
  * [x] Code blocks (fenced only, no indented code blocks)
- * [ ] Inline code blocks
+ * [x] Inline code blocks
  * [ ] Math blocks
  * [ ] Inline math blocks
  * [ ] Decide on Setex headers
