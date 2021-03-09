@@ -209,31 +209,26 @@ fn atx_headings_37() {
 }
 
 #[test]
-#[ignore]
 fn atx_headings_38() {
   compare("cm/atx-headings-38")
 }
 
 #[test]
-#[ignore]
 fn atx_headings_39() {
   compare("cm/atx-headings-39")
 }
 
 #[test]
-#[ignore]
 fn atx_headings_40() {
   compare("cm/atx-headings-40")
 }
 
 #[test]
-#[ignore]
 fn atx_headings_41() {
   compare("cm/atx-headings-41")
 }
 
 #[test]
-#[ignore]
 fn atx_headings_42() {
   compare("cm/atx-headings-42")
 }
@@ -254,7 +249,6 @@ fn atx_headings_45() {
 }
 
 #[test]
-#[ignore]
 fn atx_headings_46() {
   compare("cm/atx-headings-46")
 }
@@ -270,7 +264,6 @@ fn atx_headings_48() {
 }
 
 #[test]
-#[ignore]
 fn atx_headings_49() {
   compare("cm/atx-headings-49")
 }

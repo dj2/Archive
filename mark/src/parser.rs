@@ -357,7 +357,6 @@ impl<'a, 'b> Parser<'a> {
         let chars: Vec<(usize, char)> = line.char_indices().collect();
         let count = chars.len();
         let mut start_idx = 0;
-
         let mut idx = 0;
         while idx < count {
             let (pos, ch) = chars[idx];
@@ -444,9 +443,10 @@ impl<'a, 'b> Parser<'a> {
         if let Some(cap) = RE.captures(lines[idx]) {
             let lvl = cap.get(1).unwrap().as_str().len();
             let mut txt: &str = &"";
-            if let Some(end_txt) = cap.get(2) {
-                let end_pos = end_txt.as_str().len();
-                txt = &lines[idx][lvl + 1..lvl + end_pos].trim();
+            if let Some(end_txt) = cap.get(3) {
+                // In the case where the header is `### ###` we end up with the second `###`
+                // as the match, so trim leading matches to turn it into a blank string.
+                txt = end_txt.as_str().trim_start_matches('#');
             }
 
             let node_idx = self.add_node(Kind::Header(lvl));
