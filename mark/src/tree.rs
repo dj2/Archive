@@ -52,8 +52,8 @@ pub enum Block<'a> {
     ThematicBreak,
     /// A text block
     Text(&'a str),
-    /// A raw text block. No formatting is done on the output
-    RawText(&'a str),
+    /// An emphasis block
+    Emphasis(Vec<Block<'a>>),
 }
 
 fn write_blocks<'a>(f: &mut fmt::Formatter, blocks: &[Block<'a>]) -> fmt::Result {
@@ -114,13 +114,13 @@ impl<'a> fmt::Display for Block<'a> {
                 write_blocks(f, blocks)?;
                 writeln!(f, "</p>")?;
             }
-            Block::Text(txt) => {
-                let s = (*txt).to_string();
-                let strs: Vec<&str> = s.split_whitespace().collect();
-                write!(f, "{}", strs.join(" "))?;
-            }
             Block::ThematicBreak => writeln!(f, "<hr />")?,
-            Block::RawText(txt) => write!(f, "{}", txt)?,
+            Block::Text(txt) => write!(f, "{}", txt)?,
+            Block::Emphasis(blocks) => {
+                write!(f, "<em>")?;
+                write_blocks(f, blocks)?;
+                write!(f, "</em>")?;
+            }
         };
         Ok(())
     }

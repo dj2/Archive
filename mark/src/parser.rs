@@ -73,7 +73,7 @@ enum Kind<'a> {
     ThematicBreak,
 
     Text(&'a str),
-    RawText(&'a str),
+    Emphasis,
 }
 
 /// A node holds information about a given block in the document. The node
@@ -96,30 +96,16 @@ impl<'a> Node<'a> {
 
     /// Determines if the current node is closed by a node of `kind`.
     fn is_closed_by(&self, kind: Kind) -> bool {
+        if kind == Kind::Emphasis {
+            return false;
+        }
+        if let Kind::Text(_) = kind {
+            return false;
+        }
+
         match self.kind {
             Kind::Doc | Kind::ListElement => false,
-            Kind::Blockquote => kind != Kind::Paragraph,
-            Kind::Paragraph => {
-                if kind == Kind::Paragraph {
-                    return false;
-                }
-                if let Kind::Text(_) = kind {
-                    return false;
-                }
-                if let Kind::RawText(_) = kind {
-                    return false;
-                }
-                true
-            }
-            Kind::Header(_) | Kind::Code(_) => {
-                if let Kind::Text(_) = kind {
-                    return false;
-                }
-                if let Kind::RawText(_) = kind {
-                    return false;
-                }
-                true
-            }
+            Kind::Blockquote | Kind::Paragraph | Kind::Header(_) => kind != Kind::Paragraph,
             _ => true,
         }
     }
@@ -128,6 +114,43 @@ impl<'a> Node<'a> {
     fn is_closed_by_hardbreak(&self) -> bool {
         self.kind == Kind::Paragraph
     }
+}
+
+
+fn is_inline_open(left: Option<&(usize, char)>, right: Option<&(usize, char)>) -> bool {
+    if let Some((_, left_char)) = left {
+        if !left_char.is_whitespace() {
+            return false;
+        }
+    }
+    // Left was none, or whitespace, check right
+
+    if let Some((_, right_char)) = right {
+        if !right_char.is_whitespace() {
+            return true;
+        }
+    }
+    // If right is none, we fail as we don't allow starting the inline at
+    // end of a line.
+    false
+}
+
+fn is_inline_close(left: Option<&(usize, char)>, right: Option<&(usize, char)>) -> bool {
+    if let Some((_, left_char)) = left {
+        if left_char.is_whitespace() {
+            return false;
+        }
+    } else {
+        // Don't close at the start of a line.
+        return false;
+    }
+
+    if let Some((_, right_char)) = right {
+        if right_char.is_whitespace() {
+            return true;
+        }
+    }
+    true
 }
 
 /// The parser object. Given a string will turn it into a document AST.
@@ -182,7 +205,7 @@ impl<'a, 'b> Parser<'a> {
             Kind::Paragraph => Block::Paragraph(self.convert_blocks(idx)),
             Kind::ThematicBreak => Block::ThematicBreak,
             Kind::Text(txt) => Block::Text(txt),
-            Kind::RawText(txt) => Block::RawText(txt),
+            Kind::Emphasis => Block::Emphasis(self.convert_blocks(idx)),
         }
     }
 
@@ -263,11 +286,6 @@ impl<'a, 'b> Parser<'a> {
         self.nodes[idx].open = false;
     }
 
-    fn add_raw_text_node(&mut self, txt: &'a str) {
-        let idx = self.add_node(Kind::RawText(txt));
-        self.nodes[idx].open = false;
-    }
-
     /// Marks node at `idx` as closed.
     fn close_node(&mut self, idx: usize) {
         self.nodes[idx].open = false;
@@ -301,13 +319,42 @@ impl<'a, 'b> Parser<'a> {
             } else {
                 let node_idx = self.find_open_node(self.root);
                 if self.nodes[node_idx].kind == Kind::Paragraph {
-                    self.add_raw_text_node("\n");
+                    self.add_text_node("\n");
                 } else {
                     self.add_node(Kind::Paragraph);
                 }
-                self.add_text_node(&lines[idx]);
+                self.parse_inlines(&lines[idx]);
                 idx += 1;
             }
+        }
+    }
+
+    /// Parses the given line for inline elements
+    fn parse_inlines(&mut self, line: &'a str) {
+        let chars: Vec<(usize, char)> = line.char_indices().collect();
+        let count = chars.len();
+        let mut start_idx = 0;
+        let mut idx = 0;
+        while idx < count {
+            let (pos, ch) = chars[idx];
+            match ch {
+                '*' => {
+                    if is_inline_open(chars.get(idx - 1), chars.get(idx + 1)) {
+                        self.add_text_node(&line[chars[start_idx].0..pos]);
+                        self.add_node(Kind::Emphasis);
+                        start_idx = idx + 1;
+                    } else if is_inline_close(chars.get(idx - 1), chars.get(idx + 1)) {
+                        self.add_text_node(&line[chars[start_idx].0..pos]);
+                        self.close_node(self.find_open_node(self.root));
+                        start_idx = idx + 1;
+                    }
+                }
+                _ => {}
+            }
+            idx += 1;
+        }
+        if idx > start_idx {
+            self.add_text_node(&line[chars[start_idx].0..]);
         }
     }
 
@@ -351,7 +398,7 @@ impl<'a, 'b> Parser<'a> {
             }
 
             let node_idx = self.add_node(Kind::Header(lvl));
-            self.add_text_node(txt);
+            self.parse_inlines(txt);
             self.close_node(node_idx);
             return Some(());
         }
@@ -405,9 +452,9 @@ impl<'a, 'b> Parser<'a> {
                     }
                 }
                 if consumed > 1 {
-                    self.add_raw_text_node("\n");
+                    self.add_text_node("\n");
                 }
-                self.add_raw_text_node(&lines[idx + consumed][indent..]);
+                self.add_text_node(&lines[idx + consumed][indent..]);
                 consumed += 1;
             }
             // Make sure to consume the end marker.
