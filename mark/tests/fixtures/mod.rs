@@ -64,3 +64,8 @@ pub fn em() {
 pub fn strong() {
     compare("strong")
 }
+
+#[test]
+pub fn code() {
+    compare("code")
+}
