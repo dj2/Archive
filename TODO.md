@@ -20,8 +20,8 @@
  * [x] Blockquotes
  * [x] Paragraphs
  * [x] Setex Headers
- * [ ] Emphasis  _em_
- * [ ] Strong *strong*
+ * [x] Emphasis  _em_
+ * [x] Strong *strong*
  * [ ] Superscript e^2^
  * [ ] Subscript e~2~
  * [x] Lists
