@@ -12,7 +12,7 @@
 //! The second pass passes any inlines like emphasis as well as resolving link
 //! targets. The output of the second pass a tree of `Block`s which are the
 //! the final representation of the document.
-use crate::tree::{Block, Doc, Inline, Marker};
+use crate::tree::{Block, Doc, Marker};
 use regex::Regex;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -71,6 +71,9 @@ enum Kind<'a> {
     ListElement,
     Paragraph,
     ThematicBreak,
+
+    Text(&'a str),
+    RawText(&'a str),
 }
 
 /// A node holds information about a given block in the document. The node
@@ -81,7 +84,6 @@ struct Node<'a> {
     kind: Kind<'a>,
     open: bool,
     blocks: Vec<usize>,
-    text: Vec<&'a str>,
 }
 impl<'a> Node<'a> {
     fn new(kind: Kind<'a>) -> Self {
@@ -89,7 +91,6 @@ impl<'a> Node<'a> {
             kind,
             open: true,
             blocks: vec![],
-            text: vec![],
         }
     }
 
@@ -97,7 +98,28 @@ impl<'a> Node<'a> {
     fn is_closed_by(&self, kind: Kind) -> bool {
         match self.kind {
             Kind::Doc | Kind::ListElement => false,
-            Kind::Blockquote | Kind::Paragraph => !(kind == Kind::Paragraph),
+            Kind::Blockquote => kind != Kind::Paragraph,
+            Kind::Paragraph => {
+                if kind == Kind::Paragraph {
+                    return false;
+                }
+                if let Kind::Text(_) = kind {
+                    return false;
+                }
+                if let Kind::RawText(_) = kind {
+                    return false;
+                }
+                true
+            }
+            Kind::Header(_) | Kind::Code(_) => {
+                if let Kind::Text(_) = kind {
+                    return false;
+                }
+                if let Kind::RawText(_) = kind {
+                    return false;
+                }
+                true
+            }
             _ => true,
         }
     }
@@ -140,14 +162,6 @@ impl<'a, 'b> Parser<'a> {
         Doc::new(blocks)
     }
 
-    fn convert_inlines(&self, idx: usize) -> Vec<Inline<'a>> {
-        let mut inlines = vec![];
-        for text in &self.nodes[idx].text {
-            inlines.push(Inline::Text(text));
-        }
-        inlines
-    }
-
     fn convert_blocks(&self, idx: usize) -> Vec<Block<'a>> {
         let mut blocks = vec![];
         for n in &self.nodes[idx].blocks {
@@ -159,34 +173,16 @@ impl<'a, 'b> Parser<'a> {
     /// Converts the node at `idx` into a corresponding block.
     fn to_block(&self, idx: usize) -> Block<'a> {
         match self.nodes[idx].kind {
-            Kind::Doc => {
-                panic!("Should not call to_block on a document");
-            }
-            Kind::Code(lang) => {
-                assert!(self.nodes[idx].blocks.is_empty());
-                Block::Code(lang, self.convert_inlines(idx))
-            }
-            Kind::Blockquote => {
-                assert!(self.nodes[idx].text.is_empty());
-                Block::Blockquote(self.convert_blocks(idx))
-            }
-            Kind::Header(lvl) => {
-                assert!(self.nodes[idx].blocks.is_empty());
-                Block::Header(lvl, self.convert_inlines(idx))
-            }
-            Kind::List(_, marker, _, start) => {
-                assert!(self.nodes[idx].text.is_empty());
-                Block::List(marker, start, self.convert_blocks(idx))
-            }
-            Kind::ListElement => {
-                assert!(self.nodes[idx].text.is_empty());
-                Block::ListElement(self.convert_blocks(idx))
-            }
-            Kind::Paragraph => {
-                assert!(self.nodes[idx].blocks.is_empty());
-                Block::Paragraph(self.convert_inlines(idx))
-            }
+            Kind::Doc => panic!("Should not call to_block on a document"),
+            Kind::Code(lang) => Block::Code(lang, self.convert_blocks(idx)),
+            Kind::Blockquote => Block::Blockquote(self.convert_blocks(idx)),
+            Kind::Header(lvl) => Block::Header(lvl, self.convert_blocks(idx)),
+            Kind::List(_, marker, _, start) => Block::List(marker, start, self.convert_blocks(idx)),
+            Kind::ListElement => Block::ListElement(self.convert_blocks(idx)),
+            Kind::Paragraph => Block::Paragraph(self.convert_blocks(idx)),
             Kind::ThematicBreak => Block::ThematicBreak,
+            Kind::Text(txt) => Block::Text(txt),
+            Kind::RawText(txt) => Block::RawText(txt),
         }
     }
 
@@ -262,19 +258,19 @@ impl<'a, 'b> Parser<'a> {
         self.add_node_to_parent(parent, kind)
     }
 
-    /// Marks node at `idx` as closed.
-    fn close_node(&mut self, idx: usize) {
+    fn add_text_node(&mut self, txt: &'a str) {
+        let idx = self.add_node(Kind::Text(txt));
         self.nodes[idx].open = false;
     }
 
-    /// Adds the given `txt` to the node at `idx`.
-    fn node_add_text(&mut self, idx: usize, txt: &'a str) {
-        self.nodes[idx].text.push(txt);
+    fn add_raw_text_node(&mut self, txt: &'a str) {
+        let idx = self.add_node(Kind::RawText(txt));
+        self.nodes[idx].open = false;
     }
 
-    /// Returns true if the node `idx` contains text.
-    fn node_has_text(&self, idx: usize) -> bool {
-        !self.nodes[idx].text.is_empty()
+    /// Marks node at `idx` as closed.
+    fn close_node(&mut self, idx: usize) {
+        self.nodes[idx].open = false;
     }
 
     /// Returns true if the node at `idx` is closed by a hardbreak
@@ -303,11 +299,13 @@ impl<'a, 'b> Parser<'a> {
             } else if let Some(consumed) = self.try_list(&lines, idx) {
                 idx += consumed;
             } else {
-                let mut node_idx = self.find_open_node(self.root);
-                if !self.node_has_text(node_idx) {
-                    node_idx = self.add_node(Kind::Paragraph);
+                let node_idx = self.find_open_node(self.root);
+                if self.nodes[node_idx].kind == Kind::Paragraph {
+                    self.add_raw_text_node("\n");
+                } else {
+                    self.add_node(Kind::Paragraph);
                 }
-                self.node_add_text(node_idx, &lines[idx]);
+                self.add_text_node(&lines[idx]);
                 idx += 1;
             }
         }
@@ -353,7 +351,7 @@ impl<'a, 'b> Parser<'a> {
             }
 
             let node_idx = self.add_node(Kind::Header(lvl));
-            self.node_add_text(node_idx, txt);
+            self.add_text_node(txt);
             self.close_node(node_idx);
             return Some(());
         }
@@ -406,7 +404,10 @@ impl<'a, 'b> Parser<'a> {
                         break;
                     }
                 }
-                self.node_add_text(node, &lines[idx + consumed][indent..]);
+                if consumed > 1 {
+                    self.add_raw_text_node("\n");
+                }
+                self.add_raw_text_node(&lines[idx + consumed][indent..]);
                 consumed += 1;
             }
             // Make sure to consume the end marker.
