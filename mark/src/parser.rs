@@ -179,40 +179,34 @@ impl<'a, 'b> Parser<'a> {
     fn build_doc(&mut self) -> Doc<'a> {
         let mut blocks = vec![];
         for idx in &self.nodes[self.root].blocks {
-            blocks.push(self.to_block(*idx, true));
+            blocks.push(self.to_block(*idx));
         }
         Doc::new(blocks)
     }
 
-    fn convert_blocks(&self, idx: usize, trim: bool) -> Vec<Block<'a>> {
+    fn convert_blocks(&self, idx: usize) -> Vec<Block<'a>> {
         let mut blocks = vec![];
         for n in &self.nodes[idx].blocks {
-            blocks.push(self.to_block(*n, trim));
+            blocks.push(self.to_block(*n));
         }
         blocks
     }
 
     /// Converts the node at `idx` into a corresponding block.
-    fn to_block(&self, idx: usize, trim: bool) -> Block<'a> {
+    fn to_block(&self, idx: usize) -> Block<'a> {
         match self.nodes[idx].kind {
             Kind::Doc => panic!("Should not call to_block on a document"),
-            Kind::Code(lang) => Block::Code(lang, self.convert_blocks(idx, false)),
-            Kind::Blockquote => Block::Blockquote(self.convert_blocks(idx, trim)),
-            Kind::Header(lvl) => Block::Header(lvl, self.convert_blocks(idx, trim)),
+            Kind::Code(lang) => Block::Code(lang, self.convert_blocks(idx)),
+            Kind::Blockquote => Block::Blockquote(self.convert_blocks(idx)),
+            Kind::Header(lvl) => Block::Header(lvl, self.convert_blocks(idx)),
             Kind::List(_, marker, _, start) => {
-                Block::List(marker, start, self.convert_blocks(idx, trim))
+                Block::List(marker, start, self.convert_blocks(idx))
             }
-            Kind::ListElement => Block::ListElement(self.convert_blocks(idx, trim)),
-            Kind::Paragraph => Block::Paragraph(self.convert_blocks(idx, trim)),
+            Kind::ListElement => Block::ListElement(self.convert_blocks(idx)),
+            Kind::Paragraph => Block::Paragraph(self.convert_blocks(idx)),
             Kind::ThematicBreak => Block::ThematicBreak,
-            Kind::Text(txt) => {
-                if trim {
-                    Block::TrimmedText(txt)
-                } else {
-                    Block::Text(txt)
-                }
-            }
-            Kind::Inline(el) => Block::Inline(el, self.convert_blocks(idx, trim)),
+            Kind::Text(txt) => Block::Text(txt),
+            Kind::Inline(el) => Block::Inline(el, self.convert_blocks(idx)),
         }
     }
 
@@ -360,7 +354,6 @@ impl<'a, 'b> Parser<'a> {
 
     /// Parses the given line for inline elements
     fn parse_inlines(&mut self, line: &'a str) {
-        let line = line.trim();
         let chars: Vec<(usize, char)> = line.char_indices().collect();
         let count = chars.len();
         let mut start_idx = 0;
@@ -453,7 +446,7 @@ impl<'a, 'b> Parser<'a> {
             let mut txt: &str = &"";
             if let Some(end_txt) = cap.get(2) {
                 let end_pos = end_txt.as_str().len();
-                txt = &lines[idx][lvl + 1..lvl + end_pos];
+                txt = &lines[idx][lvl + 1..lvl + end_pos].trim();
             }
 
             let node_idx = self.add_node(Kind::Header(lvl));
