@@ -52,8 +52,8 @@ pub enum Block<'a> {
     ThematicBreak,
     /// A text block
     Text(&'a str),
-    /// An emphasis block
-    Emphasis(Vec<Block<'a>>),
+    /// An inline block
+    Inline(&'a str, Vec<Block<'a>>),
 }
 
 fn write_blocks<'a>(f: &mut fmt::Formatter, blocks: &[Block<'a>]) -> fmt::Result {
@@ -116,10 +116,10 @@ impl<'a> fmt::Display for Block<'a> {
             }
             Block::ThematicBreak => writeln!(f, "<hr />")?,
             Block::Text(txt) => write!(f, "{}", txt)?,
-            Block::Emphasis(blocks) => {
-                write!(f, "<em>")?;
+            Block::Inline(el, blocks) => {
+                write!(f, "<{}>", el)?;
                 write_blocks(f, blocks)?;
-                write!(f, "</em>")?;
+                write!(f, "</{}>", el)?;
             }
         };
         Ok(())

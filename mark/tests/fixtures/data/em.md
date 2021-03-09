@@ -1,1 +1,1 @@
-This is *em* text.
+This is _em_ text.
