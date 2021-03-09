@@ -116,7 +116,6 @@ impl<'a> Node<'a> {
     }
 }
 
-
 fn is_inline_open(left: Option<&(usize, char)>, right: Option<&(usize, char)>) -> bool {
     if let Some((_, left_char)) = left {
         if !left_char.is_whitespace() {
@@ -180,32 +179,40 @@ impl<'a, 'b> Parser<'a> {
     fn build_doc(&mut self) -> Doc<'a> {
         let mut blocks = vec![];
         for idx in &self.nodes[self.root].blocks {
-            blocks.push(self.to_block(*idx));
+            blocks.push(self.to_block(*idx, true));
         }
         Doc::new(blocks)
     }
 
-    fn convert_blocks(&self, idx: usize) -> Vec<Block<'a>> {
+    fn convert_blocks(&self, idx: usize, trim: bool) -> Vec<Block<'a>> {
         let mut blocks = vec![];
         for n in &self.nodes[idx].blocks {
-            blocks.push(self.to_block(*n));
+            blocks.push(self.to_block(*n, trim));
         }
         blocks
     }
 
     /// Converts the node at `idx` into a corresponding block.
-    fn to_block(&self, idx: usize) -> Block<'a> {
+    fn to_block(&self, idx: usize, trim: bool) -> Block<'a> {
         match self.nodes[idx].kind {
             Kind::Doc => panic!("Should not call to_block on a document"),
-            Kind::Code(lang) => Block::Code(lang, self.convert_blocks(idx)),
-            Kind::Blockquote => Block::Blockquote(self.convert_blocks(idx)),
-            Kind::Header(lvl) => Block::Header(lvl, self.convert_blocks(idx)),
-            Kind::List(_, marker, _, start) => Block::List(marker, start, self.convert_blocks(idx)),
-            Kind::ListElement => Block::ListElement(self.convert_blocks(idx)),
-            Kind::Paragraph => Block::Paragraph(self.convert_blocks(idx)),
+            Kind::Code(lang) => Block::Code(lang, self.convert_blocks(idx, false)),
+            Kind::Blockquote => Block::Blockquote(self.convert_blocks(idx, trim)),
+            Kind::Header(lvl) => Block::Header(lvl, self.convert_blocks(idx, trim)),
+            Kind::List(_, marker, _, start) => {
+                Block::List(marker, start, self.convert_blocks(idx, trim))
+            }
+            Kind::ListElement => Block::ListElement(self.convert_blocks(idx, trim)),
+            Kind::Paragraph => Block::Paragraph(self.convert_blocks(idx, trim)),
             Kind::ThematicBreak => Block::ThematicBreak,
-            Kind::Text(txt) => Block::Text(txt),
-            Kind::Inline(el) => Block::Inline(el, self.convert_blocks(idx)),
+            Kind::Text(txt) => {
+                if trim {
+                    Block::TrimmedText(txt)
+                } else {
+                    Block::Text(txt)
+                }
+            }
+            Kind::Inline(el) => Block::Inline(el, self.convert_blocks(idx, trim)),
         }
     }
 
@@ -329,30 +336,78 @@ impl<'a, 'b> Parser<'a> {
         }
     }
 
+    fn process_inline_char(
+        &mut self,
+        kind: Kind<'a>,
+        line: &'a str,
+        prev: Option<&(usize, char)>,
+        next: Option<&(usize, char)>,
+        start: usize,
+        end: usize,
+    ) -> bool {
+        if is_inline_open(prev, next) {
+            self.add_text_node(&line[start..end]);
+            self.add_node(kind);
+            true
+        } else if is_inline_close(prev, next) {
+            self.add_text_node(&line[start..end]);
+            self.close_node(self.find_open_node(self.root));
+            true
+        } else {
+            false
+        }
+    }
+
     /// Parses the given line for inline elements
     fn parse_inlines(&mut self, line: &'a str) {
+        let line = line.trim();
         let chars: Vec<(usize, char)> = line.char_indices().collect();
         let count = chars.len();
         let mut start_idx = 0;
-        let mut el = |kind, idx, pos| {
-            if is_inline_open(chars.get(idx - 1), chars.get(idx + 1)) {
-                self.add_text_node(&line[chars[start_idx].0..pos]);
-                self.add_node(kind);
-                start_idx = idx + 1;
-            } else if is_inline_close(chars.get(idx - 1), chars.get(idx + 1)) {
-                self.add_text_node(&line[chars[start_idx].0..pos]);
-                self.close_node(self.find_open_node(self.root));
-                start_idx = idx + 1;
-            }
-        };
 
         let mut idx = 0;
         while idx < count {
             let (pos, ch) = chars[idx];
+            let prev = if idx > 0 { chars.get(idx - 1) } else { None };
+            let next = chars.get(idx + 1);
+            let start = chars[start_idx].0;
             match ch {
-                '_' => el(Kind::Inline("em"), idx, pos),
-                '*' => el(Kind::Inline("strong"), idx, pos),
-                '`' => el(Kind::Inline("code"), idx, pos),
+                '_' => {
+                    if self.process_inline_char(Kind::Inline("em"), line, prev, next, start, pos) {
+                        start_idx = idx + 1;
+                    }
+                }
+                '*' => {
+                    if self.process_inline_char(
+                        Kind::Inline("strong"),
+                        line,
+                        prev,
+                        next,
+                        start,
+                        pos,
+                    ) {
+                        start_idx = idx + 1;
+                    }
+                }
+                '`' => {
+                    if self.process_inline_char(Kind::Inline("code"), line, prev, next, start, pos)
+                    {
+                        start_idx = idx + 1;
+                    }
+                }
+                '\\' => {
+                    // Handle unescaping escaped characters
+                    if let Some((_, nxt_ch)) = chars.get(idx + 1) {
+                        match nxt_ch {
+                            '#' | '*' => {
+                                self.add_text_node(&line[start..pos]);
+                                start_idx = idx + 1;
+                                idx += 1;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
                 _ => {}
             }
             idx += 1;

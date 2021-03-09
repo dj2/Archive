@@ -17,7 +17,7 @@ impl<'a> Doc<'a> {
 impl<'a> fmt::Display for Doc<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for idx in 0..self.blocks.len() {
-            writeln!(f, "{}", self.blocks[idx].to_string())?;
+            write!(f, "{}", self.blocks[idx].to_string())?;
         }
         Ok(())
     }
@@ -50,6 +50,8 @@ pub enum Block<'a> {
     Paragraph(Vec<Block<'a>>),
     /// A thematic break.
     ThematicBreak,
+    /// A text block where we will trim whitespace
+    TrimmedText(&'a str),
     /// A text block
     Text(&'a str),
     /// An inline block
@@ -115,6 +117,17 @@ impl<'a> fmt::Display for Block<'a> {
                 writeln!(f, "</p>")?;
             }
             Block::ThematicBreak => writeln!(f, "<hr />")?,
+            Block::TrimmedText(txt) => {
+                let t = (*txt).to_string();
+                let strs: Vec<&str> = t.split_whitespace().collect();
+                if txt.starts_with(' ') {
+                    write!(f, " ")?;
+                }
+                write!(f, "{}", strs.join(" "))?;
+                if txt.ends_with(' ') && txt.trim().len() > 0 {
+                    write!(f, " ")?;
+                }
+            }
             Block::Text(txt) => write!(f, "{}", txt)?,
             Block::Inline(el, blocks) => {
                 write!(f, "<{}>", el)?;
