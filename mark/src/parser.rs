@@ -459,7 +459,8 @@ impl<'a, 'b> Parser<'a> {
     /// Attempts to parse the thematic break of `***`, `---`, and `___`.
     fn try_thematic_break(&mut self, lines: &[&'a str], idx: usize) -> Option<()> {
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"^(\s*(\*|-|_)){3,}\s*$").unwrap();
+            static ref RE: Regex =
+                Regex::new(r"^((\s*\*){3,}|(\s*\-){3,}|(\s*_){3,})\s*$").unwrap();
         }
         if RE.is_match(lines[idx]) {
             let node_idx = self.add_node(Kind::ThematicBreak);

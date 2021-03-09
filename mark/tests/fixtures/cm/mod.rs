@@ -62,7 +62,6 @@ fn precedence_12() {
 }
 
 #[test]
-#[ignore]
 fn thematic_breaks_13() {
     compare("cm/thematic-breaks-13")
 }
@@ -79,24 +78,26 @@ fn thematic_breaks_15() {
 
 #[test]
 #[ignore]
+// Fixup with emphasis
 fn thematic_breaks_16() {
     compare("cm/thematic-breaks-16")
 }
 
 #[test]
-#[ignore]
 fn thematic_breaks_17() {
     compare("cm/thematic-breaks-17")
 }
 
 #[test]
 #[ignore]
+// Fixup with emphasis
 fn thematic_breaks_18() {
     compare("cm/thematic-breaks-18")
 }
 
 #[test]
 #[ignore]
+// Fixup with emphasis
 fn thematic_breaks_19() {
     compare("cm/thematic-breaks-19")
 }
@@ -127,43 +128,36 @@ fn thematic_breaks_24() {
 }
 
 #[test]
-#[ignore]
 fn thematic_breaks_25() {
     compare("cm/thematic-breaks-25")
 }
 
 #[test]
-#[ignore]
 fn thematic_breaks_26() {
     compare("cm/thematic-breaks-26")
 }
 
 #[test]
-#[ignore]
 fn thematic_breaks_27() {
     compare("cm/thematic-breaks-27")
 }
 
 #[test]
-#[ignore]
 fn thematic_breaks_28() {
     compare("cm/thematic-breaks-28")
 }
 
 #[test]
-#[ignore]
 fn thematic_breaks_29() {
     compare("cm/thematic-breaks-29")
 }
 
 #[test]
-#[ignore]
 fn thematic_breaks_30() {
     compare("cm/thematic-breaks-30")
 }
 
 #[test]
-#[ignore]
 fn thematic_breaks_31() {
     compare("cm/thematic-breaks-31")
 }
