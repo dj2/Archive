@@ -73,7 +73,7 @@ enum Kind<'a> {
     ThematicBreak,
 
     Text(&'a str),
-    Emphasis,
+    Inline(&'a str),
 }
 
 /// A node holds information about a given block in the document. The node
@@ -96,7 +96,7 @@ impl<'a> Node<'a> {
 
     /// Determines if the current node is closed by a node of `kind`.
     fn is_closed_by(&self, kind: Kind) -> bool {
-        if kind == Kind::Emphasis {
+        if let Kind::Inline(_) = kind {
             return false;
         }
         if let Kind::Text(_) = kind {
@@ -205,7 +205,7 @@ impl<'a, 'b> Parser<'a> {
             Kind::Paragraph => Block::Paragraph(self.convert_blocks(idx)),
             Kind::ThematicBreak => Block::ThematicBreak,
             Kind::Text(txt) => Block::Text(txt),
-            Kind::Emphasis => Block::Emphasis(self.convert_blocks(idx)),
+            Kind::Inline(el) => Block::Inline(el, self.convert_blocks(idx)),
         }
     }
 
@@ -334,21 +334,24 @@ impl<'a, 'b> Parser<'a> {
         let chars: Vec<(usize, char)> = line.char_indices().collect();
         let count = chars.len();
         let mut start_idx = 0;
+        let mut el = |kind, idx, pos| {
+            if is_inline_open(chars.get(idx - 1), chars.get(idx + 1)) {
+                self.add_text_node(&line[chars[start_idx].0..pos]);
+                self.add_node(kind);
+                start_idx = idx + 1;
+            } else if is_inline_close(chars.get(idx - 1), chars.get(idx + 1)) {
+                self.add_text_node(&line[chars[start_idx].0..pos]);
+                self.close_node(self.find_open_node(self.root));
+                start_idx = idx + 1;
+            }
+        };
+
         let mut idx = 0;
         while idx < count {
             let (pos, ch) = chars[idx];
             match ch {
-                '*' => {
-                    if is_inline_open(chars.get(idx - 1), chars.get(idx + 1)) {
-                        self.add_text_node(&line[chars[start_idx].0..pos]);
-                        self.add_node(Kind::Emphasis);
-                        start_idx = idx + 1;
-                    } else if is_inline_close(chars.get(idx - 1), chars.get(idx + 1)) {
-                        self.add_text_node(&line[chars[start_idx].0..pos]);
-                        self.close_node(self.find_open_node(self.root));
-                        start_idx = idx + 1;
-                    }
-                }
+                '_' => el(Kind::Inline("em"), idx, pos),
+                '*' => el(Kind::Inline("strong"), idx, pos),
                 _ => {}
             }
             idx += 1;

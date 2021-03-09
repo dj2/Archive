@@ -60,3 +60,7 @@ pub fn em() {
     compare("em")
 }
 
+#[test]
+pub fn strong() {
+    compare("strong")
+}
