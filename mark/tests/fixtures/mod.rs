@@ -22,7 +22,7 @@ pub fn compare(name: &str) {
 
     println!("{}", src);
     let actual = &mark::to_html(&src);
-    assert_eq!(result, actual.trim_end());
+    assert_eq!(actual.trim_end(), result);
 }
 
 mod cm;

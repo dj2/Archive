@@ -104,8 +104,8 @@ impl<'a> Node<'a> {
         }
 
         match self.kind {
-            Kind::Doc | Kind::ListElement => false,
-            Kind::Blockquote | Kind::Paragraph | Kind::Header(_) => kind != Kind::Paragraph,
+            Kind::Doc | Kind::Blockquote | Kind::ListElement => false,
+            Kind::Paragraph | Kind::Header(_) => kind != Kind::Paragraph,
             _ => true,
         }
     }
@@ -321,8 +321,8 @@ impl<'a, 'b> Parser<'a> {
                     self.add_text_node("\n");
                 } else {
                     self.add_node(Kind::Paragraph);
-                }
-                self.parse_inlines(&lines[idx]);
+                };
+                self.parse_inlines(lines[idx].trim());
                 idx += 1;
             }
         }
@@ -414,21 +414,28 @@ impl<'a, 'b> Parser<'a> {
     /// Note, unlike markdown, we require each line of the blockquote to start
     /// with a '>'.
     fn try_blockquote(&mut self, lines: &[&'a str], idx: usize) -> Option<usize> {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"^(\s*>\s?)").unwrap();
+        }
+
         let mut consumed = 0;
         let mut sub_lines: Vec<&'a str> = vec![];
 
         while idx + consumed < lines.len() {
-            if !lines[idx + consumed].starts_with("> ") && !lines[idx + consumed].starts_with(">\t")
-            {
+            if let Some(cap) = RE.captures(lines[idx + consumed]) {
+                let marker = cap.get(1).unwrap().as_str().len();
+
+                // Strip the marker from the start of the blockquote.
+                sub_lines.push(&lines[idx + consumed][marker..]);
+                consumed += 1;
+            } else {
                 break;
             }
-            // Strip the '> ' from the start of the blockquote.
-            sub_lines.push(&lines[idx + consumed][2..]);
-            consumed += 1;
         }
         if consumed > 0 {
-            let _ = self.add_node(Kind::Blockquote);
+            let node_idx = self.add_node(Kind::Blockquote);
             self.parse_lines(&sub_lines);
+            self.close_node(node_idx);
             return Some(consumed);
         }
         None
@@ -524,16 +531,17 @@ impl<'a, 'b> Parser<'a> {
     /// of lines consumed.
     fn try_list(&mut self, lines: &[&'a str], idx: usize) -> Option<usize> {
         lazy_static! {
-            static ref RE: Regex =
-                Regex::new(r"^(\s*(?:\*|\+|\-|(?:(?:[0-9]{1,9}|[a-z]|[A-Z])(?:\.|\)))))(\s+.*)?$")
-                    .unwrap();
+            static ref RE: Regex = Regex::new(
+                r"^(\s*(?:\*|\+|\-|(?:(?:[0-9]{1,9}|[a-z]|[A-Z])(?:\.|\))))\s{1,4})(.*)?$"
+            )
+            .unwrap();
             static ref SPACE_RE: Regex = Regex::new(r"^(\s*)").unwrap();
         }
 
         if let Some(cap) = RE.captures(lines[idx]) {
             let marker = cap.get(1).unwrap().as_str();
             // Subsequent lines must indent to marker + 1.
-            let indent = marker.len() + 1;
+            let indent = marker.len();
             let (marker_kind, marker_close, marker_start) = parse_marker(marker.trim());
 
             let mut consumed = 1;

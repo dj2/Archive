@@ -67,7 +67,7 @@ impl<'a> fmt::Display for Block<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Block::Blockquote(blocks) => {
-                write!(f, "<blockquote>")?;
+                writeln!(f, "<blockquote>")?;
                 write_blocks(f, blocks)?;
                 writeln!(f, "</blockquote>")?;
             }
@@ -78,6 +78,9 @@ impl<'a> fmt::Display for Block<'a> {
                 }
                 write!(f, ">")?;
                 write_blocks(f, lines)?;
+                if !lines.is_empty() {
+                    writeln!(f,)?;
+                }
                 writeln!(f, "</code></pre>")?;
             }
             Block::Header(lvl, content) => {
@@ -96,7 +99,7 @@ impl<'a> fmt::Display for Block<'a> {
                 };
                 let mut attr = attr.to_string();
                 if *start != 1 {
-                    attr = format!("{} start='{}'", attr, *start);
+                    attr = format!("{} start=\"{}\"", attr, *start);
                 }
                 writeln!(f, "<{}{}>", list, attr)?;
                 write_blocks(f, blocks)?;
