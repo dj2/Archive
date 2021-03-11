@@ -472,13 +472,11 @@ fn indented_code_blocks_88() {
 }
 
 #[test]
-#[ignore]
 fn fenced_code_blocks_89() {
     compare("cm/fenced-code-blocks-89")
 }
 
 #[test]
-#[ignore]
 fn fenced_code_blocks_90() {
     compare("cm/fenced-code-blocks-90")
 }
@@ -535,25 +533,21 @@ fn fenced_code_blocks_100() {
 }
 
 #[test]
-#[ignore]
 fn fenced_code_blocks_101() {
     compare("cm/fenced-code-blocks-101")
 }
 
 #[test]
-#[ignore]
 fn fenced_code_blocks_102() {
     compare("cm/fenced-code-blocks-102")
 }
 
 #[test]
-#[ignore]
 fn fenced_code_blocks_103() {
     compare("cm/fenced-code-blocks-103")
 }
 
 #[test]
-#[ignore]
 fn fenced_code_blocks_104() {
     compare("cm/fenced-code-blocks-104")
 }
@@ -564,13 +558,11 @@ fn fenced_code_blocks_105() {
 }
 
 #[test]
-#[ignore]
 fn fenced_code_blocks_106() {
     compare("cm/fenced-code-blocks-106")
 }
 
 #[test]
-#[ignore]
 fn fenced_code_blocks_107() {
     compare("cm/fenced-code-blocks-107")
 }
@@ -598,19 +590,16 @@ fn fenced_code_blocks_111() {
 }
 
 #[test]
-#[ignore]
 fn fenced_code_blocks_112() {
     compare("cm/fenced-code-blocks-112")
 }
 
 #[test]
-#[ignore]
 fn fenced_code_blocks_113() {
     compare("cm/fenced-code-blocks-113")
 }
 
 #[test]
-#[ignore]
 fn fenced_code_blocks_114() {
     compare("cm/fenced-code-blocks-114")
 }
@@ -622,7 +611,6 @@ fn fenced_code_blocks_115() {
 }
 
 #[test]
-#[ignore]
 fn fenced_code_blocks_116() {
     compare("cm/fenced-code-blocks-116")
 }
