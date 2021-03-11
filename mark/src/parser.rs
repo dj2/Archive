@@ -305,7 +305,8 @@ impl<'a, 'b> Parser<'a> {
                     self.close_node(node_idx);
                 }
                 idx += 1;
-            } else if self.try_thematic_break(&lines, idx).is_some()
+            } else if self.try_setext_header(&lines, idx).is_some()
+                || self.try_thematic_break(&lines, idx).is_some()
                 || self.try_header(&lines, idx).is_some()
             {
                 idx += 1;
@@ -503,6 +504,27 @@ impl<'a, 'b> Parser<'a> {
             self.parse_inlines(txt);
             self.close_node(node_idx);
             return Some(());
+        }
+        None
+    }
+
+    /// Attempts to parse a Setext header `===` or `---`. Note, this deviates
+    /// from Commonmark as we require at least 3 of the marker characters.
+    fn try_setext_header(&mut self, lines: &[&'a str], idx: usize) -> Option<()> {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"^\s*(\-{3,}|={3,})\s*$").unwrap();
+        }
+        if let Some(cap) = RE.captures(lines[idx]) {
+            let marker = cap.get(1).unwrap().as_str().trim();
+
+            let node_idx = self.find_open_node(self.root);
+            if self.nodes[node_idx].kind == Kind::Paragraph {
+                let lvl = if marker.starts_with('-') { 2 } else { 1 };
+
+                self.nodes[node_idx].kind = Kind::Header(lvl);
+                self.close_node(node_idx);
+                return Some(());
+            }
         }
         None
     }
