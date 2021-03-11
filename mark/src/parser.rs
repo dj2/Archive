@@ -500,7 +500,8 @@ impl<'a, 'b> Parser<'a> {
     /// number of lines consumed.
     fn try_fenced_code(&mut self, lines: &[&'a str], idx: usize) -> Option<usize> {
         lazy_static! {
-            static ref START_RE: Regex = Regex::new(r"^(\s*)(`{3,}|~{3,})\s*([^\s]*).*$").unwrap();
+            static ref START_RE: Regex =
+                Regex::new(r"^(\s*)(`{3,}|~{3,})\s*([^\s]*)(.*)$").unwrap();
             static ref END_RE: Regex = Regex::new(r"^\s*(`{3,}|~{3,})\s*$").unwrap();
         }
 
@@ -509,6 +510,18 @@ impl<'a, 'b> Parser<'a> {
             let indent = cap.get(1).unwrap().as_str().len();
             let marker = cap.get(2).unwrap().as_str().trim();
             let lang_str = cap.get(3).unwrap().as_str();
+            let rem = cap.get(4).unwrap().as_str();
+
+            // The marker can't contain spaces, so if the end regular expression
+            // matches this is an open and close code block which is invalid.
+            if END_RE.is_match(lang_str) {
+                return None;
+            }
+            // Backtick blocks can't contain backticks in lang block
+            if marker.starts_with('`') && (lang_str.contains('`') || rem.contains('`')) {
+                return None;
+            }
+
             let lang = if lang_str.is_empty() {
                 None
             } else {
@@ -531,7 +544,42 @@ impl<'a, 'b> Parser<'a> {
                 if consumed > 1 {
                     self.add_text_node("\n");
                 }
-                self.add_text_node(&lines[idx + consumed][indent..]);
+
+                let line = &lines[idx + consumed];
+                let chars: Vec<(usize, char)> = line.char_indices().collect();
+                let mut char_idx = 0;
+
+                // Skip indent whitespace if present.
+                for _ in 0..indent {
+                    let (_, ch) = chars[char_idx];
+                    if !ch.is_whitespace() {
+                        break;
+                    }
+                    char_idx += 1;
+                }
+
+                let mut start_idx = char_idx;
+                while char_idx < chars.len() {
+                    let (pos, ch) = chars[char_idx];
+                    let start = chars[start_idx].0;
+                    match ch {
+                        '>' => {
+                            self.add_text_node(&line[start..pos]);
+                            self.add_text_node("&gt;");
+                            start_idx = char_idx + 1;
+                        }
+                        '<' => {
+                            self.add_text_node(&line[start..pos]);
+                            self.add_text_node("&lt;");
+                            start_idx = char_idx + 1;
+                        }
+                        _ => {}
+                    }
+                    char_idx += 1;
+                }
+                if char_idx > start_idx {
+                    self.add_text_node(&line[chars[start_idx].0..]);
+                }
                 consumed += 1;
             }
             // Make sure to consume the end marker.

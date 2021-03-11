@@ -74,7 +74,7 @@ impl<'a> fmt::Display for Block<'a> {
             Block::Code(lang, lines) => {
                 write!(f, "<pre><code")?;
                 if let Some(lang) = lang {
-                    write!(f, " class='language-{}'", lang)?;
+                    write!(f, " class=\"language-{}\"", lang)?;
                 }
                 write!(f, ">")?;
                 write_blocks(f, lines)?;
