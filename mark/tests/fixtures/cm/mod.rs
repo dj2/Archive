@@ -247,7 +247,6 @@ fn atx_headings_49() {
 }
 
 #[test]
-#[ignore]
 fn setext_headings_50() {
     compare("cm/setext-headings-50")
 }
@@ -265,31 +264,26 @@ fn setext_headings_52() {
 }
 
 #[test]
-#[ignore]
 fn setext_headings_53() {
     compare("cm/setext-headings-53")
 }
 
 #[test]
-#[ignore]
 fn setext_headings_54() {
     compare("cm/setext-headings-54")
 }
 
 #[test]
-#[ignore]
 fn setext_headings_55() {
     compare("cm/setext-headings-55")
 }
 
 #[test]
-#[ignore]
 fn setext_headings_56() {
     compare("cm/setext-headings-56")
 }
 
 #[test]
-#[ignore]
 fn setext_headings_57() {
     compare("cm/setext-headings-57")
 }
@@ -300,13 +294,11 @@ fn setext_headings_58() {
 }
 
 #[test]
-#[ignore]
 fn setext_headings_59() {
     compare("cm/setext-headings-59")
 }
 
 #[test]
-#[ignore]
 fn setext_headings_60() {
     compare("cm/setext-headings-60")
 }
@@ -323,25 +315,21 @@ fn setext_headings_62() {
 }
 
 #[test]
-#[ignore]
 fn setext_headings_63() {
     compare("cm/setext-headings-63")
 }
 
 #[test]
-#[ignore]
 fn setext_headings_64() {
     compare("cm/setext-headings-64")
 }
 
 #[test]
-#[ignore]
 fn setext_headings_65() {
     compare("cm/setext-headings-65")
 }
 
 #[test]
-#[ignore]
 fn setext_headings_66() {
     compare("cm/setext-headings-66")
 }
@@ -357,13 +345,11 @@ fn setext_headings_68() {
 }
 
 #[test]
-#[ignore]
 fn setext_headings_69() {
     compare("cm/setext-headings-69")
 }
 
 #[test]
-#[ignore]
 fn setext_headings_70() {
     compare("cm/setext-headings-70")
 }
@@ -374,13 +360,11 @@ fn setext_headings_71() {
 }
 
 #[test]
-#[ignore]
 fn setext_headings_72() {
     compare("cm/setext-headings-72")
 }
 
 #[test]
-#[ignore]
 fn setext_headings_73() {
     compare("cm/setext-headings-73")
 }
@@ -396,7 +380,6 @@ fn setext_headings_75() {
 }
 
 #[test]
-#[ignore]
 fn setext_headings_76() {
     compare("cm/setext-headings-76")
 }
@@ -584,7 +567,6 @@ fn fenced_code_blocks_110() {
 }
 
 #[test]
-#[ignore]
 fn fenced_code_blocks_111() {
     compare("cm/fenced-code-blocks-111")
 }
