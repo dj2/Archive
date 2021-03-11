@@ -117,15 +117,15 @@ impl<'a> Node<'a> {
 }
 
 fn is_inline_open(ch: char, left: Option<&(usize, char)>, right: Option<&(usize, char)>) -> bool {
-    if let Some((_, left_char)) = left {
+    if let Some(&(_, left_char)) = left {
         if !left_char.is_whitespace() {
             return false;
         }
     }
     // Left was none, or whitespace, check right
 
-    if let Some((_, right_char)) = right {
-        if !right_char.is_whitespace() && *right_char != ch {
+    if let Some(&(_, right_char)) = right {
+        if !right_char.is_whitespace() && right_char != ch {
             return true;
         }
     }
@@ -135,8 +135,8 @@ fn is_inline_open(ch: char, left: Option<&(usize, char)>, right: Option<&(usize,
 }
 
 fn is_inline_close(ch: char, left: Option<&(usize, char)>, right: Option<&(usize, char)>) -> bool {
-    if let Some((_, left_char)) = left {
-        if left_char.is_whitespace() || ch == *left_char {
+    if let Some(&(_, left_char)) = left {
+        if left_char.is_whitespace() || ch == left_char {
             return false;
         }
     } else {
@@ -144,7 +144,7 @@ fn is_inline_close(ch: char, left: Option<&(usize, char)>, right: Option<&(usize
         return false;
     }
 
-    if let Some((_, right_char)) = right {
+    if let Some(&(_, right_char)) = right {
         if right_char.is_whitespace() {
             return true;
         }
