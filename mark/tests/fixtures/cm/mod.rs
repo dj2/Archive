@@ -385,7 +385,6 @@ fn setext_headings_76() {
 }
 
 #[test]
-#[ignore]
 fn indented_code_blocks_77() {
     compare("cm/indented-code-blocks-77")
 }
@@ -396,25 +395,21 @@ fn indented_code_blocks_78() {
 }
 
 #[test]
-#[ignore]
 fn indented_code_blocks_79() {
     compare("cm/indented-code-blocks-79")
 }
 
 #[test]
-#[ignore]
 fn indented_code_blocks_80() {
     compare("cm/indented-code-blocks-80")
 }
 
 #[test]
-#[ignore]
 fn indented_code_blocks_81() {
     compare("cm/indented-code-blocks-81")
 }
 
 #[test]
-#[ignore]
 fn indented_code_blocks_82() {
     compare("cm/indented-code-blocks-82")
 }
@@ -425,31 +420,26 @@ fn indented_code_blocks_83() {
 }
 
 #[test]
-#[ignore]
 fn indented_code_blocks_84() {
     compare("cm/indented-code-blocks-84")
 }
 
 #[test]
-#[ignore]
 fn indented_code_blocks_85() {
     compare("cm/indented-code-blocks-85")
 }
 
 #[test]
-#[ignore]
 fn indented_code_blocks_86() {
     compare("cm/indented-code-blocks-86")
 }
 
 #[test]
-#[ignore]
 fn indented_code_blocks_87() {
     compare("cm/indented-code-blocks-87")
 }
 
 #[test]
-#[ignore]
 fn indented_code_blocks_88() {
     compare("cm/indented-code-blocks-88")
 }
