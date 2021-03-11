@@ -1121,19 +1121,16 @@ fn block_quotes_200() {
 }
 
 #[test]
-#[ignore]
 fn block_quotes_201() {
     compare("cm/block-quotes-201")
 }
 
 #[test]
-#[ignore]
 fn block_quotes_202() {
     compare("cm/block-quotes-202")
 }
 
 #[test]
-#[ignore]
 fn block_quotes_203() {
     compare("cm/block-quotes-203")
 }
@@ -1144,13 +1141,11 @@ fn block_quotes_204() {
 }
 
 #[test]
-#[ignore]
 fn block_quotes_205() {
     compare("cm/block-quotes-205")
 }
 
 #[test]
-#[ignore]
 fn block_quotes_206() {
     compare("cm/block-quotes-206")
 }
@@ -1161,7 +1156,6 @@ fn block_quotes_207() {
 }
 
 #[test]
-#[ignore]
 fn block_quotes_208() {
     compare("cm/block-quotes-208")
 }
@@ -1207,7 +1201,6 @@ fn block_quotes_216() {
 }
 
 #[test]
-#[ignore]
 fn block_quotes_217() {
     compare("cm/block-quotes-217")
 }
@@ -1223,19 +1216,16 @@ fn block_quotes_219() {
 }
 
 #[test]
-#[ignore]
 fn block_quotes_220() {
     compare("cm/block-quotes-220")
 }
 
 #[test]
-#[ignore]
 fn block_quotes_221() {
     compare("cm/block-quotes-221")
 }
 
 #[test]
-#[ignore]
 fn block_quotes_222() {
     compare("cm/block-quotes-222")
 }
