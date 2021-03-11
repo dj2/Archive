@@ -1639,7 +1639,6 @@ fn inlines_297() {
 }
 
 #[test]
-#[ignore]
 fn backslash_escapes_298() {
     compare("cm/backslash-escapes-298")
 }

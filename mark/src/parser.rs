@@ -407,9 +407,35 @@ impl<'a, 'b> Parser<'a> {
                     // Handle unescaping escaped characters
                     if let Some((_, nxt_ch)) = chars.get(idx + 1) {
                         match nxt_ch {
-                            '#' | '*' => {
+                            '#' | '*' | '!' | '$' | '%' | '\'' | '(' | ')' | '+' | ',' | '-'
+                            | '.' | '/' | ':' | ';' | '=' | '?' | '@' | '[' | '\\' | ']' | '^'
+                            | '_' | '`' | '{' | '|' | '}' | '~' => {
                                 self.add_text_node(&line[start..pos]);
                                 start_idx = idx + 1;
+                                idx += 1;
+                            }
+                            '"' => {
+                                self.add_text_node(&line[start..pos]);
+                                self.add_text_node("&quot;");
+                                start_idx = idx + 2;
+                                idx += 1;
+                            }
+                            '&' => {
+                                self.add_text_node(&line[start..pos]);
+                                self.add_text_node("&amp;");
+                                start_idx = idx + 2;
+                                idx += 1;
+                            }
+                            '>' => {
+                                self.add_text_node(&line[start..pos]);
+                                self.add_text_node("&gt;");
+                                start_idx = idx + 2;
+                                idx += 1;
+                            }
+                            '<' => {
+                                self.add_text_node(&line[start..pos]);
+                                self.add_text_node("&lt;");
+                                start_idx = idx + 2;
                                 idx += 1;
                             }
                             _ => {}
