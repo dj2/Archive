@@ -1083,7 +1083,6 @@ fn paragraphs_194() {
 }
 
 #[test]
-#[ignore]
 fn paragraphs_195() {
     compare("cm/paragraphs-195")
 }
