@@ -77,8 +77,6 @@ fn thematic_breaks_15() {
 }
 
 #[test]
-#[ignore]
-// Fixup with emphasis
 fn thematic_breaks_16() {
     compare("cm/thematic-breaks-16")
 }
@@ -89,15 +87,11 @@ fn thematic_breaks_17() {
 }
 
 #[test]
-#[ignore]
-// Fixup with emphasis
 fn thematic_breaks_18() {
     compare("cm/thematic-breaks-18")
 }
 
 #[test]
-#[ignore]
-// Fixup with emphasis
 fn thematic_breaks_19() {
     compare("cm/thematic-breaks-19")
 }
@@ -2203,7 +2197,6 @@ fn emphasis_and_strong_emphasis_389() {
 }
 
 #[test]
-#[ignore]
 fn emphasis_and_strong_emphasis_390() {
     compare("cm/emphasis-and-strong-emphasis-390")
 }
@@ -2239,7 +2232,6 @@ fn emphasis_and_strong_emphasis_395() {
 }
 
 #[test]
-#[ignore]
 fn emphasis_and_strong_emphasis_396() {
     compare("cm/emphasis-and-strong-emphasis-396")
 }
@@ -2376,13 +2368,11 @@ fn emphasis_and_strong_emphasis_418() {
 }
 
 #[test]
-#[ignore]
 fn emphasis_and_strong_emphasis_419() {
     compare("cm/emphasis-and-strong-emphasis-419")
 }
 
 #[test]
-#[ignore]
 fn emphasis_and_strong_emphasis_420() {
     compare("cm/emphasis-and-strong-emphasis-420")
 }
@@ -2460,19 +2450,16 @@ fn emphasis_and_strong_emphasis_432() {
 }
 
 #[test]
-#[ignore]
 fn emphasis_and_strong_emphasis_433() {
     compare("cm/emphasis-and-strong-emphasis-433")
 }
 
 #[test]
-#[ignore]
 fn emphasis_and_strong_emphasis_434() {
     compare("cm/emphasis-and-strong-emphasis-434")
 }
 
 #[test]
-#[ignore]
 fn emphasis_and_strong_emphasis_435() {
     compare("cm/emphasis-and-strong-emphasis-435")
 }
@@ -2490,7 +2477,6 @@ fn emphasis_and_strong_emphasis_437() {
 }
 
 #[test]
-#[ignore]
 fn emphasis_and_strong_emphasis_438() {
     compare("cm/emphasis-and-strong-emphasis-438")
 }
@@ -2544,7 +2530,6 @@ fn emphasis_and_strong_emphasis_446() {
 }
 
 #[test]
-#[ignore]
 fn emphasis_and_strong_emphasis_447() {
     compare("cm/emphasis-and-strong-emphasis-447")
 }
@@ -2562,7 +2547,6 @@ fn emphasis_and_strong_emphasis_449() {
 }
 
 #[test]
-#[ignore]
 fn emphasis_and_strong_emphasis_450() {
     compare("cm/emphasis-and-strong-emphasis-450")
 }
@@ -2586,7 +2570,6 @@ fn emphasis_and_strong_emphasis_453() {
 }
 
 #[test]
-#[ignore]
 fn emphasis_and_strong_emphasis_454() {
     compare("cm/emphasis-and-strong-emphasis-454")
 }
@@ -2610,7 +2593,6 @@ fn emphasis_and_strong_emphasis_457() {
 }
 
 #[test]
-#[ignore]
 fn emphasis_and_strong_emphasis_458() {
     compare("cm/emphasis-and-strong-emphasis-458")
 }

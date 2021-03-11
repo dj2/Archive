@@ -116,7 +116,7 @@ impl<'a> Node<'a> {
     }
 }
 
-fn is_inline_open(left: Option<&(usize, char)>, right: Option<&(usize, char)>) -> bool {
+fn is_inline_open(ch: char, left: Option<&(usize, char)>, right: Option<&(usize, char)>) -> bool {
     if let Some((_, left_char)) = left {
         if !left_char.is_whitespace() {
             return false;
@@ -125,7 +125,7 @@ fn is_inline_open(left: Option<&(usize, char)>, right: Option<&(usize, char)>) -
     // Left was none, or whitespace, check right
 
     if let Some((_, right_char)) = right {
-        if !right_char.is_whitespace() {
+        if !right_char.is_whitespace() && *right_char != ch {
             return true;
         }
     }
@@ -134,9 +134,9 @@ fn is_inline_open(left: Option<&(usize, char)>, right: Option<&(usize, char)>) -
     false
 }
 
-fn is_inline_close(left: Option<&(usize, char)>, right: Option<&(usize, char)>) -> bool {
+fn is_inline_close(ch: char, left: Option<&(usize, char)>, right: Option<&(usize, char)>) -> bool {
     if let Some((_, left_char)) = left {
-        if left_char.is_whitespace() {
+        if left_char.is_whitespace() || ch == *left_char {
             return false;
         }
     } else {
@@ -328,20 +328,22 @@ impl<'a, 'b> Parser<'a> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn process_inline_char(
         &mut self,
         kind: Kind<'a>,
+        ch: char,
         line: &'a str,
         prev: Option<&(usize, char)>,
         next: Option<&(usize, char)>,
         start: usize,
         end: usize,
     ) -> bool {
-        if is_inline_open(prev, next) {
+        if is_inline_open(ch, prev, next) {
             self.add_text_node(&line[start..end]);
             self.add_node(kind);
             true
-        } else if is_inline_close(prev, next) {
+        } else if is_inline_close(ch, prev, next) {
             self.add_text_node(&line[start..end]);
             self.close_node(self.find_open_node(self.root));
             true
@@ -363,13 +365,22 @@ impl<'a, 'b> Parser<'a> {
             let start = chars[start_idx].0;
             match ch {
                 '_' => {
-                    if self.process_inline_char(Kind::Inline("em"), line, prev, next, start, pos) {
+                    if self.process_inline_char(
+                        Kind::Inline("em"),
+                        '_',
+                        line,
+                        prev,
+                        next,
+                        start,
+                        pos,
+                    ) {
                         start_idx = idx + 1;
                     }
                 }
                 '*' => {
                     if self.process_inline_char(
                         Kind::Inline("strong"),
+                        '*',
                         line,
                         prev,
                         next,
@@ -380,8 +391,15 @@ impl<'a, 'b> Parser<'a> {
                     }
                 }
                 '`' => {
-                    if self.process_inline_char(Kind::Inline("code"), line, prev, next, start, pos)
-                    {
+                    if self.process_inline_char(
+                        Kind::Inline("code"),
+                        '`',
+                        line,
+                        prev,
+                        next,
+                        start,
+                        pos,
+                    ) {
                         start_idx = idx + 1;
                     }
                 }
