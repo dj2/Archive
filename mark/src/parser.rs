@@ -63,7 +63,8 @@ enum Kind<'a> {
     Doc,
     Header(usize /* level */),
     List(
-        usize, /* indent */
+        usize, /* distance up to, and including marker */
+        usize, /* distance after marker */
         Marker,
         MarkerClose,
         u32, /* start value */
@@ -199,7 +200,9 @@ impl<'a, 'b> Parser<'a> {
             Kind::Code(lang) => Block::Code(lang, self.convert_blocks(idx)),
             Kind::Blockquote => Block::Blockquote(self.convert_blocks(idx)),
             Kind::Header(lvl) => Block::Header(lvl, self.convert_blocks(idx)),
-            Kind::List(_, marker, _, start) => Block::List(marker, start, self.convert_blocks(idx)),
+            Kind::List(_, _, marker, _, start) => {
+                Block::List(marker, start, self.convert_blocks(idx))
+            }
             Kind::ListElement => Block::ListElement(self.convert_blocks(idx)),
             Kind::Paragraph => Block::Paragraph(self.convert_blocks(idx)),
             Kind::ThematicBreak => Block::ThematicBreak,
@@ -227,23 +230,34 @@ impl<'a, 'b> Parser<'a> {
     fn find_parent_list(
         &self,
         idx: usize,
-        indent: usize,
+        to_marker: usize,
+        after_marker: usize,
         marker: Marker,
         marker_close: MarkerClose,
     ) -> Option<usize> {
         let node = self.nodes[idx].blocks.last();
-        if let Some(i) = node {
-            if self.nodes[*i].open {
-                if let Some(ret) = self.find_parent_list(*i, indent, marker, marker_close) {
+        if let Some(&i) = node {
+            if self.nodes[i].open {
+                if let Some(ret) =
+                    self.find_parent_list(i, to_marker, after_marker, marker, marker_close)
+                {
                     return Some(ret);
                 }
 
-                if let Kind::List(ind, marker_kind, close, _) = self.nodes[*i].kind {
+                if let Kind::List(dist_to_marker, dist_after_marker, marker_kind, close, _) =
+                    self.nodes[i].kind
+                {
                     // If the indent level matches, the marker is the same
                     // and the marker close are the same, then this is
-                    // the list we attach too.
-                    if ind <= indent && marker_kind == marker && close == marker_close {
-                        return Some(*i);
+                    // the list we attach too. For the space after the marker, we
+                    // only compare it if it's non-zero.
+                    if dist_to_marker <= to_marker
+                        && (after_marker == 0 || dist_after_marker <= after_marker)
+                        && to_marker <= (dist_to_marker + dist_after_marker)
+                        && marker_kind == marker
+                        && close == marker_close
+                    {
+                        return Some(i);
                     }
                 }
             }
@@ -646,7 +660,7 @@ impl<'a, 'b> Parser<'a> {
     fn try_list(&mut self, lines: &[&'a str], idx: usize) -> Option<usize> {
         lazy_static! {
             static ref RE: Regex = Regex::new(
-                r"^(\s*(?:\*|\+|\-|(?:(?:[0-9]{1,9}|[a-z]|[A-Z])(?:\.|\))))\s{1,4})(.*)?$"
+                r"^(\s*(?:\*|\+|\-|(?:(?:[0-9]{1,9}|[a-z]|[A-Z])(?:\.|\)))))(?:(\s{1,4})(.*)|)?$"
             )
             .unwrap();
             static ref SPACE_RE: Regex = Regex::new(r"^(\s*)").unwrap();
@@ -654,18 +668,33 @@ impl<'a, 'b> Parser<'a> {
 
         if let Some(cap) = RE.captures(lines[idx]) {
             let marker = cap.get(1).unwrap().as_str();
-            // Subsequent lines must indent to marker + 1.
-            let indent = marker.len();
+            let sp = cap.get(2).map_or("", |v| v.as_str());
+            let rem = cap.get(3).map_or("", |v| v.as_str());
+
+            // Subsequent lines must indent to marker + 1. The exception is if
+            // the list marker is blank, then there is no indent amount other
+            // then the marker itself.
+            let (indent, start_blank) = if rem.trim().is_empty() {
+                (marker.len(), true)
+            } else {
+                (marker.len() + sp.len(), false)
+            };
             let (marker_kind, marker_close, marker_start) = parse_marker(marker.trim());
+
+            // Blank list marker can not interrupt a paragraph.
+            let open_node = self.find_open_node(self.root);
+            if start_blank && self.nodes[open_node].kind == Kind::Paragraph {
+                return None;
+            }
 
             let mut consumed = 1;
             let mut sub_lines: Vec<&'a str> = vec![&lines[idx][indent..]];
             while idx + consumed < lines.len() {
                 if let Some(space_cap) = SPACE_RE.captures(lines[idx + consumed]) {
-                    let sp = space_cap.get(1).unwrap().as_str();
+                    let start_sp = space_cap.get(1).unwrap().as_str();
                     // If the amount of space is at least as much as the marker
                     // but the line is not just whitespace.
-                    if sp.len() < indent && sp.len() != lines[idx + consumed].len() {
+                    if start_sp.len() < indent && start_sp.len() != lines[idx + consumed].len() {
                         break;
                     }
                 } else {
@@ -673,11 +702,12 @@ impl<'a, 'b> Parser<'a> {
                 }
 
                 if lines[idx + consumed].trim().is_empty() {
-                    sub_lines.push(&lines[idx + consumed]);
-                } else {
-                    // Strip the marker space from the start of the line.
-                    sub_lines.push(&lines[idx + consumed][indent..]);
+                    // Only 1 blank line allowed at the start of the list.
+                    if start_blank && consumed == 1 {
+                        break;
+                    }
                 }
+                sub_lines.push(&lines[idx + consumed]);
                 consumed += 1;
             }
             if consumed > 0 {
@@ -687,7 +717,6 @@ impl<'a, 'b> Parser<'a> {
                 // First, get the current open node, if it's a paragraph then we
                 // look at the marker and only allow certain makers to break the
                 // paragraph.
-                let open_node = self.find_open_node(self.root);
                 if self.nodes[open_node].kind == Kind::Paragraph {
                     // Ordered markers must start with 1 to break a paragraph
                     if (marker_kind == Marker::Numeric
@@ -699,11 +728,25 @@ impl<'a, 'b> Parser<'a> {
                     }
                 }
 
-                let parent = self.find_parent_list(self.root, indent, marker_kind, marker_close);
+                let parent = self.find_parent_list(
+                    self.root,
+                    marker.len(),
+                    sp.len(),
+                    marker_kind,
+                    marker_close,
+                );
                 let parent_idx = parent.map_or_else(
                     // We didn't find a parent to add too, so find the open node,
                     // and add the list.
-                    || self.add_node(Kind::List(indent, marker_kind, marker_close, marker_start)),
+                    || {
+                        self.add_node(Kind::List(
+                            marker.len(),
+                            sp.len(),
+                            marker_kind,
+                            marker_close,
+                            marker_start,
+                        ))
+                    },
                     // Found a list which matches this new element so we'll append
                     // to that list instead of creating a new one.
                     |idx| idx,
