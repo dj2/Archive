@@ -1244,7 +1244,6 @@ fn list_items_234() {
 }
 
 #[test]
-#[ignore]
 fn list_items_235() {
     compare("cm/list-items-235")
 }
@@ -1255,13 +1254,11 @@ fn list_items_236() {
 }
 
 #[test]
-#[ignore]
 fn list_items_237() {
     compare("cm/list-items-237")
 }
 
 #[test]
-#[ignore]
 fn list_items_238() {
     compare("cm/list-items-238")
 }
@@ -1272,31 +1269,26 @@ fn list_items_239() {
 }
 
 #[test]
-#[ignore]
 fn list_items_240() {
     compare("cm/list-items-240")
 }
 
 #[test]
-#[ignore]
 fn list_items_241() {
     compare("cm/list-items-241")
 }
 
 #[test]
-#[ignore]
 fn list_items_242() {
     compare("cm/list-items-242")
 }
 
 #[test]
-#[ignore]
 fn list_items_243() {
     compare("cm/list-items-243")
 }
 
 #[test]
-#[ignore]
 fn list_items_244() {
     compare("cm/list-items-244")
 }
@@ -1307,7 +1299,6 @@ fn list_items_245() {
 }
 
 #[test]
-#[ignore]
 fn list_items_246() {
     compare("cm/list-items-246")
 }
@@ -1318,43 +1309,36 @@ fn list_items_247() {
 }
 
 #[test]
-#[ignore]
 fn list_items_248() {
     compare("cm/list-items-248")
 }
 
 #[test]
-#[ignore]
 fn list_items_249() {
     compare("cm/list-items-249")
 }
 
 #[test]
-#[ignore]
 fn list_items_250() {
     compare("cm/list-items-250")
 }
 
 #[test]
-#[ignore]
 fn list_items_251() {
     compare("cm/list-items-251")
 }
 
 #[test]
-#[ignore]
 fn list_items_252() {
     compare("cm/list-items-252")
 }
 
 #[test]
-#[ignore]
 fn list_items_253() {
     compare("cm/list-items-253")
 }
 
 #[test]
-#[ignore]
 fn list_items_254() {
     compare("cm/list-items-254")
 }
@@ -1365,55 +1349,46 @@ fn list_items_255() {
 }
 
 #[test]
-#[ignore]
 fn list_items_256() {
     compare("cm/list-items-256")
 }
 
 #[test]
-#[ignore]
 fn list_items_257() {
     compare("cm/list-items-257")
 }
 
 #[test]
-#[ignore]
 fn list_items_258() {
     compare("cm/list-items-258")
 }
 
 #[test]
-#[ignore]
 fn list_items_259() {
     compare("cm/list-items-259")
 }
 
 #[test]
-#[ignore]
 fn list_items_260() {
     compare("cm/list-items-260")
 }
 
 #[test]
-#[ignore]
 fn list_items_261() {
     compare("cm/list-items-261")
 }
 
 #[test]
-#[ignore]
 fn list_items_262() {
     compare("cm/list-items-262")
 }
 
 #[test]
-#[ignore]
 fn list_items_263() {
     compare("cm/list-items-263")
 }
 
 #[test]
-#[ignore]
 fn list_items_264() {
     compare("cm/list-items-264")
 }
@@ -1425,13 +1400,11 @@ fn list_items_265() {
 }
 
 #[test]
-#[ignore]
 fn list_items_266() {
     compare("cm/list-items-266")
 }
 
 #[test]
-#[ignore]
 fn list_items_267() {
     compare("cm/list-items-267")
 }
@@ -1449,7 +1422,6 @@ fn list_items_269() {
 }
 
 #[test]
-#[ignore]
 fn list_items_270() {
     compare("cm/list-items-270")
 }
@@ -1513,6 +1485,7 @@ fn lists_280() {
 }
 
 #[test]
+#[ignore]
 fn lists_281() {
     compare("cm/lists-281")
 }
@@ -1588,6 +1561,7 @@ fn lists_293() {
 }
 
 #[test]
+#[ignore]
 fn lists_294() {
     compare("cm/lists-294")
 }
