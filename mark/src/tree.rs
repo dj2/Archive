@@ -54,6 +54,8 @@ pub enum Block<'a> {
     Text(&'a str),
     /// An inline block
     Inline(&'a str, Vec<Block<'a>>),
+    /// Raw HTML
+    RawHtml(Vec<Block<'a>>),
 }
 
 fn write_blocks<'a>(f: &mut fmt::Formatter, blocks: &[Block<'a>]) -> fmt::Result {
@@ -121,6 +123,9 @@ impl<'a> fmt::Display for Block<'a> {
                 write!(f, "<{}>", el)?;
                 write_blocks(f, blocks)?;
                 write!(f, "</{}>", el)?;
+            }
+            Block::RawHtml(lines) => {
+                write_blocks(f, lines)?;
             }
         };
         Ok(())
