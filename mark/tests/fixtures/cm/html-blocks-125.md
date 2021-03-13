@@ -1,3 +1,5 @@
+Deviates: * is strong.
+
 <div>
 *foo*
 

@@ -593,121 +593,101 @@ fn fenced_code_blocks_117() {
 }
 
 #[test]
-#[ignore]
 fn html_blocks_118() {
     compare("cm/html-blocks-118")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_119() {
     compare("cm/html-blocks-119")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_120() {
     compare("cm/html-blocks-120")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_121() {
     compare("cm/html-blocks-121")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_122() {
     compare("cm/html-blocks-122")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_123() {
     compare("cm/html-blocks-123")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_124() {
     compare("cm/html-blocks-124")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_125() {
     compare("cm/html-blocks-125")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_126() {
     compare("cm/html-blocks-126")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_127() {
     compare("cm/html-blocks-127")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_128() {
     compare("cm/html-blocks-128")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_129() {
     compare("cm/html-blocks-129")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_130() {
     compare("cm/html-blocks-130")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_131() {
     compare("cm/html-blocks-131")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_132() {
     compare("cm/html-blocks-132")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_133() {
     compare("cm/html-blocks-133")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_134() {
     compare("cm/html-blocks-134")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_135() {
     compare("cm/html-blocks-135")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_136() {
     compare("cm/html-blocks-136")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_137() {
     compare("cm/html-blocks-137")
 }
@@ -719,103 +699,86 @@ fn html_blocks_138() {
 }
 
 #[test]
-#[ignore]
 fn html_blocks_139() {
     compare("cm/html-blocks-139")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_140() {
     compare("cm/html-blocks-140")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_141() {
     compare("cm/html-blocks-141")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_142() {
     compare("cm/html-blocks-142")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_143() {
     compare("cm/html-blocks-143")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_144() {
     compare("cm/html-blocks-144")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_145() {
     compare("cm/html-blocks-145")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_146() {
     compare("cm/html-blocks-146")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_147() {
     compare("cm/html-blocks-147")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_148() {
     compare("cm/html-blocks-148")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_149() {
     compare("cm/html-blocks-149")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_150() {
     compare("cm/html-blocks-150")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_151() {
     compare("cm/html-blocks-151")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_152() {
     compare("cm/html-blocks-152")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_153() {
     compare("cm/html-blocks-153")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_154() {
     compare("cm/html-blocks-154")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_155() {
     compare("cm/html-blocks-155")
 }
@@ -826,25 +789,21 @@ fn html_blocks_156() {
 }
 
 #[test]
-#[ignore]
 fn html_blocks_157() {
     compare("cm/html-blocks-157")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_158() {
     compare("cm/html-blocks-158")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_159() {
     compare("cm/html-blocks-159")
 }
 
 #[test]
-#[ignore]
 fn html_blocks_160() {
     compare("cm/html-blocks-160")
 }
@@ -1636,7 +1595,6 @@ fn backslash_escapes_306() {
 }
 
 #[test]
-#[ignore]
 fn backslash_escapes_307() {
     compare("cm/backslash-escapes-307")
 }
@@ -1696,7 +1654,6 @@ fn entity_and_numeric_character_references_316() {
 }
 
 #[test]
-#[ignore]
 fn entity_and_numeric_character_references_317() {
     compare("cm/entity-and-numeric-character-references-317")
 }

@@ -12,6 +12,9 @@
 //! The second pass passes any inlines like emphasis as well as resolving link
 //! targets. The output of the second pass a tree of `Block`s which are the
 //! the final representation of the document.
+
+#![allow(clippy::trivial_regex)]
+
 use crate::tree::{Block, Doc, Marker};
 use regex::Regex;
 
@@ -72,6 +75,7 @@ enum Kind<'a> {
     ListElement,
     Paragraph,
     ThematicBreak,
+    RawHtml,
 
     Text(&'a str),
     Inline(&'a str),
@@ -105,7 +109,7 @@ impl<'a> Node<'a> {
         }
 
         match self.kind {
-            Kind::Doc | Kind::Blockquote | Kind::ListElement => false,
+            Kind::Doc | Kind::Blockquote | Kind::ListElement | Kind::RawHtml => false,
             Kind::Paragraph | Kind::Header(_) => kind != Kind::Paragraph,
             _ => true,
         }
@@ -208,6 +212,7 @@ impl<'a, 'b> Parser<'a> {
             Kind::ThematicBreak => Block::ThematicBreak,
             Kind::Text(txt) => Block::Text(txt),
             Kind::Inline(el) => Block::Inline(el, self.convert_blocks(idx)),
+            Kind::RawHtml => Block::RawHtml(self.convert_blocks(idx)),
         }
     }
 
@@ -324,6 +329,8 @@ impl<'a, 'b> Parser<'a> {
                 || self.try_header(&lines, idx).is_some()
             {
                 idx += 1;
+            } else if let Some(consumed) = self.try_raw_html(&lines, idx) {
+                idx += consumed;
             } else if let Some(consumed) = self.try_fenced_code(&lines, idx) {
                 idx += consumed;
             } else if let Some(consumed) = self.try_blockquote(&lines, idx) {
@@ -646,12 +653,84 @@ impl<'a, 'b> Parser<'a> {
             }
             // Make sure to consume the end marker.
             consumed += 1;
-            if consumed > 0 {
-                self.close_node(node);
-                return Some(consumed);
-            }
+            self.close_node(node);
+            return Some(consumed);
         }
         None
+    }
+
+    fn try_raw_html(&mut self, lines: &[&'a str], idx: usize) -> Option<usize> {
+        lazy_static! {
+            static ref SCRIPT_PRE_OR_STYLE_OPEN_RE: Regex =
+                Regex::new(r"^\s*<(?i)(script|pre|style)(\s|>|$)").unwrap();
+            static ref SCRIPT_PRE_OR_STYLE_CLOSE_RE: Regex =
+                Regex::new(r"</(?i)(script|pre|style)>").unwrap();
+
+            static ref COMMENT_OPEN_RE: Regex = Regex::new(r"^\s*<!\-\-").unwrap();
+            static ref COMMENT_CLOSE_RE: Regex = Regex::new(r"\-\->").unwrap();
+
+            static ref PHP_OPEN_RE: Regex = Regex::new(r"^\s*<\?").unwrap();
+            static ref PHP_CLOSE_RE: Regex = Regex::new(r"\?>").unwrap();
+
+            static ref LESS_BANG_OPEN_RE: Regex = Regex::new(r"^\s*<![A-Z]").unwrap();
+            static ref LESS_BANG_CLOSE_RE: Regex = Regex::new(r">").unwrap();
+
+            static ref CDATA_OPEN_RE: Regex = Regex::new(r"^\s*<!\[CDATA\[").unwrap();
+            static ref CDATA_CLOSE_RE: Regex = Regex::new(r"\]\]>").unwrap();
+
+            static ref TAG_OPEN_RE: Regex = Regex::new(r"^\s*</?(?i)(address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-4]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(\s|/?>|$)").unwrap();
+
+            static ref CUSTOM_TAG_OPEN1_RE: Regex = Regex::new(r"^\s*<[a-zA-Z0-9\-]+[^>]*?/?>\s*$").unwrap();
+            static ref CUSTOM_TAG_OPEN2_RE: Regex = Regex::new(r"^\s*</[a-zA-Z0-9\-]+[^>]*?>\s*$").unwrap();
+
+            static ref TAG_OR_CUSTOM_TAG_CLOSE_RE: Regex = Regex::new(r"^\s*$").unwrap();
+        }
+
+        let (is_custom, close_re): (bool, &Regex) =
+            if SCRIPT_PRE_OR_STYLE_OPEN_RE.is_match(lines[idx]) {
+                (false, &SCRIPT_PRE_OR_STYLE_CLOSE_RE)
+            } else if COMMENT_OPEN_RE.is_match(lines[idx]) {
+                (false, &COMMENT_CLOSE_RE)
+            } else if PHP_OPEN_RE.is_match(lines[idx]) {
+                (false, &PHP_CLOSE_RE)
+            } else if LESS_BANG_OPEN_RE.is_match(lines[idx]) {
+                (false, &LESS_BANG_CLOSE_RE)
+            } else if CDATA_OPEN_RE.is_match(lines[idx]) {
+                (false, &CDATA_CLOSE_RE)
+            } else if TAG_OPEN_RE.is_match(lines[idx]) {
+                (true, &TAG_OR_CUSTOM_TAG_CLOSE_RE)
+            } else if CUSTOM_TAG_OPEN1_RE.is_match(lines[idx])
+                || CUSTOM_TAG_OPEN2_RE.is_match(lines[idx])
+            {
+                // Custom tag does not break paragraphs.
+                let open_node = self.find_open_node(self.root);
+                if self.nodes[open_node].kind == Kind::Paragraph {
+                    return None;
+                }
+                (true, &TAG_OR_CUSTOM_TAG_CLOSE_RE)
+            } else {
+                return None;
+            };
+
+        let node = self.add_node(Kind::RawHtml);
+        let mut consumed = 0;
+        while idx + consumed < lines.len() {
+            if close_re.is_match(lines[idx + consumed]) {
+                if !is_custom {
+                    self.add_text_node(lines[idx + consumed]);
+                    self.add_text_node("\n");
+                }
+                break;
+            }
+            self.add_text_node(lines[idx + consumed]);
+            self.add_text_node("\n");
+            consumed += 1;
+        }
+        // Make sure to consume the end marker.
+        consumed += 1;
+        self.close_node(node);
+
+        Some(consumed)
     }
 
     /// Attempt to parse a list in `lines`. If a list is found, then
