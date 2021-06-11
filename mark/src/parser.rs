@@ -59,19 +59,22 @@ fn parse_marker(marker: &'_ str) -> (Marker, MarkerClose, u32) {
     (marker_kind, marker_close, marker_start)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct ListData {
+    dist_to_marker: usize,
+    dist_after_marker: usize,
+    marker: Marker,
+    close: MarkerClose,
+    start_value: u32,
+}
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum Kind<'a> {
     Blockquote,
     Code(Option<&'a str>),
     Doc,
     Header(usize /* level */),
-    List(
-        usize, /* distance up to, and including marker */
-        usize, /* distance after marker */
-        Marker,
-        MarkerClose,
-        u32, /* start value */
-    ),
+    List(ListData),
     ListElement,
     Paragraph,
     ThematicBreak,
@@ -204,8 +207,8 @@ impl<'a, 'b> Parser<'a> {
             Kind::Code(lang) => Block::Code(lang, self.convert_blocks(idx)),
             Kind::Blockquote => Block::Blockquote(self.convert_blocks(idx)),
             Kind::Header(lvl) => Block::Header(lvl, self.convert_blocks(idx)),
-            Kind::List(_, _, marker, _, start) => {
-                Block::List(marker, start, self.convert_blocks(idx))
+            Kind::List(data) => {
+                Block::List(data.marker, data.start_value, self.convert_blocks(idx))
             }
             Kind::ListElement => Block::ListElement(self.convert_blocks(idx)),
             Kind::Paragraph => Block::Paragraph(self.convert_blocks(idx)),
@@ -249,18 +252,16 @@ impl<'a, 'b> Parser<'a> {
                     return Some(ret);
                 }
 
-                if let Kind::List(dist_to_marker, dist_after_marker, marker_kind, close, _) =
-                    self.nodes[i].kind
-                {
+                if let Kind::List(data) = self.nodes[i].kind {
                     // If the indent level matches, the marker is the same
                     // and the marker close are the same, then this is
                     // the list we attach too. For the space after the marker, we
                     // only compare it if it's non-zero.
-                    if dist_to_marker <= to_marker
-                        && (after_marker == 0 || dist_after_marker <= after_marker)
-                        && to_marker <= (dist_to_marker + dist_after_marker)
-                        && marker_kind == marker
-                        && close == marker_close
+                    if data.dist_to_marker <= to_marker
+                        && (after_marker == 0 || data.dist_after_marker <= after_marker)
+                        && to_marker <= (data.dist_to_marker + data.dist_after_marker)
+                        && data.marker == marker
+                        && data.close == marker_close
                     {
                         return Some(i);
                     }
@@ -818,13 +819,13 @@ impl<'a, 'b> Parser<'a> {
                     // We didn't find a parent to add too, so find the open node,
                     // and add the list.
                     || {
-                        self.add_node(Kind::List(
-                            marker.len(),
-                            sp.len(),
-                            marker_kind,
-                            marker_close,
-                            marker_start,
-                        ))
+                        self.add_node(Kind::List(ListData {
+                            dist_to_marker: marker.len(),
+                            dist_after_marker: sp.len(),
+                            marker: marker_kind,
+                            close: marker_close,
+                            start_value: marker_start,
+                        }))
                     },
                     // Found a list which matches this new element so we'll append
                     // to that list instead of creating a new one.
