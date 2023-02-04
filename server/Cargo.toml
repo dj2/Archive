@@ -9,7 +9,7 @@ readme = "README.md"
 repository = "https://github.com/dj2/Archive/server"
 
 [dependencies]
-tokio = { version = "1.2", features = [ "sync" ] }
+tokio = { version = "1.18", features = [ "sync" ] }
 serde = { version = "1.0", features = [ "derive" ] }
 chrono = { version = "0.4" }
 mark = { path = "../mark" }
